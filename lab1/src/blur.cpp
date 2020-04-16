@@ -152,7 +152,8 @@ int large_gauss_test(int argc, char **argv) {
     // Can set as the number of trials
     int n_channels = 1;
     // Can set how many data points arbitrarily
-    int n_frames = 1e7;
+    int n_frames = 1000;
+    //int n_frames = 1e7;
 #endif
 
 
