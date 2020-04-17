@@ -45,6 +45,18 @@ void checkTransposed(const float *a, const float *b, int n) {
     assert(correct);
 }
 
+
+void print_mat(const float *a, int n)
+{
+    for(int j = 0; j < 4; j++)
+    {
+        printf("[%f %f %f %f]\n", a[j*n], a[j*n + 1], a[j*n + 2], a[j*n + 3]);
+    }
+
+}
+
+
+
 /* Naive CPU transpose, takes an n x n matrix in input and writes to output. */
 void cpuTranspose(const float *input, float *output, int n) {
     for (int i = 0; i < n; i++) {
@@ -189,6 +201,13 @@ int main(int argc, char *argv[]) {
             gpuErrChk(cudaMemcpy(output, d_output, n * n * sizeof(float), 
                 cudaMemcpyDeviceToHost));
             checkTransposed(input, output, n);
+            
+            
+            //printf("naive in \n");
+            //print_mat(input, n);
+            //printf("naive out \n");
+            //print_mat(output, n);
+
 
             memset(output, 0, n * n * sizeof(float));
             gpuErrChk(cudaMemset(d_output, 0, n * n * sizeof(float)));
@@ -204,6 +223,13 @@ int main(int argc, char *argv[]) {
 
             gpuErrChk(cudaMemcpy(output, d_output, n * n * sizeof(float), 
                 cudaMemcpyDeviceToHost));
+            
+            //printf("shmem in \n");
+            //print_mat(input, n);
+            //printf("shmem out \n");
+            //print_mat(output, n);
+
+            
             checkTransposed(input, output, n);
 
             memset(output, 0, n * n * sizeof(float));
