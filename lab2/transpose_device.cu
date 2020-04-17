@@ -41,6 +41,8 @@ void naiveTransposeKernel(const float *input, float *output, int n) {
     int j = 4 * threadIdx.y + 64 * blockIdx.y;
     const int end_j = j + 4;
 
+    // left side is non coalesced (stride n accesses)
+    // right side could be coalesced if __syncthreads() was added each iteration
     for (; j < end_j; j++)
         output[j + n * i] = input[i + n * j];
 }
@@ -52,15 +54,25 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
     // memory bank conflicts (0 bank conflicts should be possible using
     // padding). Again, comment on all sub-optimal accesses.
 
-    // __shared__ float data[???];
+    __shared__ float shared_mem[16][64];
 
+    // blocksize (64, 16)
     const int i = threadIdx.x + 64 * blockIdx.x;
     int j = 4 * threadIdx.y + 64 * blockIdx.y;
     const int end_j = j + 4;
+    
+    for (; j < end_j; j++){
 
-    for (; j < end_j; j++)
-        output[j + n * i] = input[i + n * j];
+        shared_mem[threadIdx.y][threadIdx.x] = input[j * blockDim.x + i];
+        __syncthreads();
+        output[i * blockDim.x + j] = shared_mem[threadIdx.y][threadIdx.x];
+        __syncthreads();
+    }
 }
+
+
+
+
 
 __global__
 void optimalTransposeKernel(const float *input, float *output, int n) {
