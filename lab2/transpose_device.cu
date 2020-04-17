@@ -63,7 +63,7 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
     
     for (int k = 0; j < end_j; j++){
 
-        shared_mem[threadIdx.y + k][threadIdx.x] = input[j * n + i];
+        shared_mem[4 * threadIdx.y + k][threadIdx.x] = input[j * n + i];
         k++;
         //__syncthreads();
         //output[i * n + j] = shared_mem[threadIdx.y][threadIdx.x];
@@ -73,7 +73,7 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
     int j = 4 * threadIdx.y + 64 * blockIdx.y;
 
     for(int k = 0; j < end_j; j++){
-        output[n * j + i] = shared_mem[threadIdx.x][threadIdx.y];
+        output[n * j + i] = shared_mem[threadIdx.x][4 * threadIdx.y + k];
     }
     __syncthreads();
 }
