@@ -54,16 +54,19 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
     // memory bank conflicts (0 bank conflicts should be possible using
     // padding). Again, comment on all sub-optimal accesses.
 
-    __shared__ float shared_mem[64][64];
+    __shared__ float shared_mem[64][66];
 
-    // blocksize (64, 16)
+    int shift = 0;
+    if (threadIdx.x > 31) shift +=1; // padding to prevent memory bank conflicts
+    // leave single gap between elements 0-31 in shared mem, 32-63
+
     int i = threadIdx.x + 64 * blockIdx.x;
     int j = 4 * threadIdx.y + 64 * blockIdx.y;
     int end_j = j + 4;
     
     for (int k = 0; j < end_j; j++){
 
-        shared_mem[4 * threadIdx.y + k][threadIdx.x] = input[j * n + i];
+        shared_mem[4 * threadIdx.y + k][threadIdx.x + shift] = input[j * n + i];
         k++;
     }
     
@@ -71,12 +74,14 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
     j = 4 * threadIdx.y + 64 * blockIdx.x;
     i = threadIdx.x + 64 * blockIdx.y;
     end_j = j + 4;
+    shift = 0;
+    if (threadIdx.y > 7) shift += 1;
     
     //j = threadIdx.x + 64 * blockIdx.x;
     //i = 4 * threadIdx.y + 64 * blockIdx.y;
 
     for(int k = 0; j < end_j; j++){
-        output[n * j + i] = shared_mem[threadIdx.x][4 * threadIdx.y + k];
+        output[n * j + i] = shared_mem[threadIdx.x][4 * threadIdx.y + k + shift];
         k++;
     }
 }
