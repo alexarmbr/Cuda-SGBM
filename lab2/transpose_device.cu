@@ -2,6 +2,16 @@
 #include <cuda_runtime.h>
 #include "transpose_device.cuh"
 
+
+// TODO:
+// implemement optimized version of transpose
+// use nvvp (installed locally already)
+// https://discuss.mxnet.io/t/using-nvidia-profiling-tools-visual-profiler-and-nsight-compute/2801
+
+
+
+
+
 /*
  * TODO for all kernels (including naive):
  * Leave a comment above all non-coalesced memory accesses and bank conflicts.
