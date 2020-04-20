@@ -87,8 +87,6 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
     shift = 0;
     if (threadIdx.y > 7) shift += 1;
     
-    //j = threadIdx.x + 64 * blockIdx.x;
-    //i = 4 * threadIdx.y + 64 * blockIdx.y;
 
     for(int k = 0; j < end_j; j++){
         output[n * j + i] = shared_mem[threadIdx.x][4 * threadIdx.y + k + shift];
@@ -102,7 +100,9 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
 
 __global__
 void optimalTransposeKernel(const float *input, float *output, int n) {
-
+    // only difference between shmem implementation and this is that
+    // loops are removed. Seems to improve speed by about 10%
+    // same or faster than memcpy.
 
     __shared__ float shared_mem[64][66];
 
@@ -126,9 +126,9 @@ void optimalTransposeKernel(const float *input, float *output, int n) {
     if (threadIdx.y > 7) shift += 1;
 
     output[n * j + i] = shared_mem[threadIdx.x][4 * threadIdx.y + shift];
-    output[n * (j+1) + i] = shared_mem[threadIdx.x][4 * (threadIdx.y + 1) + shift];
-    output[n * (j+2) + i] = shared_mem[threadIdx.x][4 * (threadIdx.y + 2) + shift];
-    output[n * (j+3) + i] = shared_mem[threadIdx.x][4 * (threadIdx.y + 3) + shift];
+    output[n * (j+1) + i] = shared_mem[threadIdx.x][4 * threadIdx.y + 1 + shift];
+    output[n * (j+2) + i] = shared_mem[threadIdx.x][4 * threadIdx.y + 2 + shift];
+    output[n * (j+3) + i] = shared_mem[threadIdx.x][4 * threadIdx.y + 3 + shift];
 }
 
 void cudaTranspose(
