@@ -102,16 +102,33 @@ void shmemTransposeKernel(const float *input, float *output, int n) {
 
 __global__
 void optimalTransposeKernel(const float *input, float *output, int n) {
-    // TODO: This should be based off of your shmemTransposeKernel.
-    // Use any optimization tricks discussed so far to improve performance.
-    // Consider ILP and loop unrolling.
 
-    const int i = threadIdx.x + 64 * blockIdx.x;
+
+    __shared__ float shared_mem[64][66];
+
+    int shift = 0;
+    if (threadIdx.x > 31) shift +=1; // padding to prevent memory bank conflicts
+    // leave single gap between elements 0-31 in shared mem, 32-63
+
+    int i = threadIdx.x + 64 * blockIdx.x;
     int j = 4 * threadIdx.y + 64 * blockIdx.y;
-    const int end_j = j + 4;
 
-    for (; j < end_j; j++)
-        output[j + n * i] = input[i + n * j];
+    shared_mem[4 * threadIdx.y][threadIdx.x + shift] = input[j * n + i];
+    shared_mem[4 * threadIdx.y + 1][threadIdx.x + shift] = input[(j+1) * n + i];
+    shared_mem[4 * threadIdx.y + 2][threadIdx.x + shift] = input[(j+2) * n + i];
+    shared_mem[4 * threadIdx.y + 3][threadIdx.x + shift] = input[(j+3) * n + i];
+
+
+    __syncthreads();
+    j = 4 * threadIdx.y + 64 * blockIdx.x;
+    i = threadIdx.x + 64 * blockIdx.y;
+    shift = 0;
+    if (threadIdx.y > 7) shift += 1;
+
+    output[n * j + i] = shared_mem[threadIdx.x][4 * threadIdx.y + shift];
+    output[n * (j+1) + i] = shared_mem[threadIdx.x][4 * (threadIdx.y + 1) + shift];
+    output[n * (j+2) + i] = shared_mem[threadIdx.x][4 * (threadIdx.y + 2) + shift];
+    output[n * (j+3) + i] = shared_mem[threadIdx.x][4 * (threadIdx.y + 3) + shift];
 }
 
 void cudaTranspose(
