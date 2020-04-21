@@ -246,6 +246,8 @@ int large_gauss_test(int argc, char **argv){
 
     Also, unlike in Homework 1, we don't copy our impulse response
     yet, because this is now given to us per-channel. */
+    dev_input_data = (cufftComplex*) malloc(sizeof(cufftComplex) * padded_length);
+    
 
 
 
