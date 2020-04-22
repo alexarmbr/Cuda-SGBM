@@ -2,10 +2,9 @@
  * Kevin Yuh, 2014 */
 
 #include <cstdio>
-
 #include <cuda_runtime.h>
 #include <cufft.h>
-
+#include <math.h>
 #include "fft_convolve.cuh"
 
 
@@ -36,8 +35,25 @@ __device__ static float atomicMax(float* address, float val)
 __global__
 void
 cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v, 
-    cufftComplex *out_data,
-    int padded_length) {
+    cufftComplex *out_data, int padded_length, const unsigned int work_per_thread) {
+
+        int tidx = blockIdx.x * blockDim.x + threadIdx.x;
+        tidx *= work_per_thread;
+
+        for(int i = 0; i < work_per_thread; i++){
+            if (tidx <= padded_length - 1)
+            {
+                // check this i did it while sleep deprived
+                out_data[tidx].x = raw_data[tidx].x * impulse_v[tidx].x - raw_data[tidx].y * impulse_v[tidx].y
+                out_data[tidx].y = raw_data[tidx].x * impulse_v[tidx].y - raw_data[tidx].x * impulse_v[tidx].x
+                out_data[tidx] /= padded_length
+                
+                tidx += 1
+
+                
+            }
+        }
+
 
 
     /* TODO: Implement the point-wise multiplication and scaling for the
@@ -53,6 +69,10 @@ cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v,
     resilient to varying numbers of threads.
 
     */
+    
+
+
+
 }
 
 __global__
@@ -105,9 +125,18 @@ void cudaCallProdScaleKernel(const unsigned int blocks,
         const cufftComplex *impulse_v,
         cufftComplex *out_data,
         const unsigned int padded_length) {
+
+            int N = ceil(padded_length / (blocks * threadsPerBlock));
+            cudaProdScaleKernel<<<blocks, threadsPerBlock>>>(
+                raw_data,
+                impulse_v,
+                out_data,
+                padded_length,
+                N
+            );
         
     /* TODO: Call the element-wise product and scaling kernel. */
-}
+        }
 
 void cudaCallMaximumKernel(const unsigned int blocks,
         const unsigned int threadsPerBlock,

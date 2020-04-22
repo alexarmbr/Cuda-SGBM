@@ -13,7 +13,8 @@ void cudaCallProdScaleKernel(const unsigned int blocks,
         const cufftComplex *raw_data,
         const cufftComplex *impulse_v,
         cufftComplex *out_data,
-        const unsigned int padded_length);
+        const unsigned int padded_length, 
+        const unsigned int work_per_thread);
 
 
 void cudaCallMaximumKernel(const unsigned int blocks,

@@ -246,9 +246,9 @@ int large_gauss_test(int argc, char **argv){
 
     Also, unlike in Homework 1, we don't copy our impulse response
     yet, because this is now given to us per-channel. */
-    cudaMalloc((void **) &dev_input_data, sizeof(cufftComplex) * padded_length)
-    cudaMalloc((void **) &dev_impulse_v, sizeof(cufftComplex) * padded_length)
-    cudaMalloc((void **) &dev_out_data, sizeof(cufftComplex) * padded_length)
+    cudaMalloc((void **) &dev_input_data, sizeof(cufftComplex) * padded_length);
+    cudaMalloc((void **) &dev_impulse_v, sizeof(cufftComplex) * padded_length);
+    cudaMalloc((void **) &dev_out_data, sizeof(cufftComplex) * padded_length);
 
 
 
@@ -391,37 +391,31 @@ int large_gauss_test(int argc, char **argv){
         Note that input_data only stores
         x[n] as read from the input audio file, and not the padding, 
         so be careful with the size of your memory copy. */
+        
         cudaMemcpy(dev_input_data, input_data, sizeof(cufftComplex) * N, cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_input_data, 0, sizeof(cufftComplex) * (padded_length - N), cudaMemcpyHostToDevice);
-
-
-
-
-
+        cudaMemset(dev_input_data + ((N+1) * sizeof(cufftComplex)), 0, (padded_length - N) * sizeof(cufftComplex));
         /* TODO: Copy this channel's impulse response data (stored in impulse_data)
         from host memory to the GPU. 
-
         Like input_data, impulse_data
         only stores h[n] as read from the impulse response file, 
         and not the padding, so again, be careful with the size
         of your memory copy. (It's not the same size as the input_data copy.)
         */
-
-
-        /* TODO: We're only copying to part of the allocated
-        memory regions on the GPU above, and we still need to zero-pad.
-        (See Lecture 9 for details on padding.)
-        Set the rest of the memory regions to 0 (recommend using cudaMemset).
-        */
+        cudaMemcpy(dev_impulse_v, impulse_data, sizeof(cufftComplex) * impulse_length, cudaMemcpyHostToDevice);
+        cudaMemset(dev_impulse_v + (sizeof(cufftComplex) * (impulse_length+1)), 0, (padded_length - impulse_length) * sizeof(cufftComplex));
 
 
         /* TODO: Create a cuFFT plan for the forward and inverse transforms. 
         (You can use the same plan for both, as is done in the lecture examples.)
         */
-
+        cufftHandle plan;
+        int batch = 1;
+        cufftPlan1d(&plan, padded_length, CUFFT_C2C, batch);
 
         /* TODO: Run the forward DFT on the input signal and the impulse response. 
         (Do these in-place.) */
+        cufftExecC2C(plan, dev_input_data, dev_input_data, CUFFT_FORWARD);
+        cufftExecC2C(plan, dev_impulse_v, dev_impulse_v, CUFFT_FORWARD);
 
 
 
