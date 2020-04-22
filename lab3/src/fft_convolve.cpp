@@ -246,10 +246,9 @@ int large_gauss_test(int argc, char **argv){
 
     Also, unlike in Homework 1, we don't copy our impulse response
     yet, because this is now given to us per-channel. */
-    dev_input_data = (cufftComplex*) malloc(sizeof(cufftComplex) * padded_length);
-    
-
-
+    cudaMalloc((void **) &dev_input_data, sizeof(cufftComplex) * padded_length)
+    cudaMalloc((void **) &dev_impulse_v, sizeof(cufftComplex) * padded_length)
+    cudaMalloc((void **) &dev_out_data, sizeof(cufftComplex) * padded_length)
 
 
 
@@ -381,14 +380,20 @@ int large_gauss_test(int argc, char **argv){
         // Start timer...
         START_TIMER();
 
+    // cufftComplex *dev_input_data;
+    // cufftComplex *dev_impulse_v;
+    // cufftComplex *dev_out_data;
 
 
         /* TODO: Copy this channel's input data (stored in input_data)
-        from host memory to the GPU. 
+        from host memory to the GPU.
 
         Note that input_data only stores
         x[n] as read from the input audio file, and not the padding, 
         so be careful with the size of your memory copy. */
+        cudaMemcpy(dev_input_data, input_data, sizeof(cufftComplex) * N, cudaMemcpyHostToDevice);
+        cudaMemcpy(dev_input_data, 0, sizeof(cufftComplex) * (padded_length - N), cudaMemcpyHostToDevice);
+
 
 
 
