@@ -45,7 +45,10 @@ cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v,
             {
                 out_data[tidx].x = raw_data[tidx].x * impulse_v[tidx].x - raw_data[tidx].y * impulse_v[tidx].y;
                 out_data[tidx].y = raw_data[tidx].x * impulse_v[tidx].y + raw_data[tidx].y * impulse_v[tidx].x;
+                
+                // scale by length of sequence, because for X of length n, IFFT(FFT(X)) = n*X
                 out_data[tidx].x /= padded_length;
+                out_data[tidx].y /= padded_length;
                 tidx += 1;
             }
         }
@@ -122,7 +125,8 @@ void cudaCallProdScaleKernel(const unsigned int blocks,
         cufftComplex *out_data,
         const unsigned int padded_length) {
 
-            int N = ceil(padded_length / (blocks * threadsPerBlock));
+
+            int N = ceil( (float) padded_length / (blocks * threadsPerBlock));
             cudaProdScaleKernel<<<blocks, threadsPerBlock>>>(
                 raw_data,
                 impulse_v,

@@ -176,7 +176,7 @@ int large_gauss_test(int argc, char **argv){
     parameter to control how many trials we run. */
 
     int nChannels = 2;      // Can set as the number of trials
-    int N = 1e7;        // Can set how many data points arbitrarily
+    int N = 1e5;        // Can set how many data points arbitrarily
     int impulse_length = GAUSSIAN_SIZE;
 
 #endif
@@ -375,6 +375,18 @@ int large_gauss_test(int argc, char **argv){
         const unsigned int blocks = std::min( max_blocks, 
             (unsigned int) ceil(N/(float)local_size) );
 
+        int * testdata_host = (int *) malloc(10 * sizeof(int));
+        for(int w = 0; w < 10; w++)
+        {
+            testdata_host[w] = w;
+        }
+        int * testdata_device;
+        cudaMalloc((void **) &testdata_device, sizeof(int) * 10);
+        cudaMemcpy(testdata_device, testdata_host, 10* sizeof(int), cudaMemcpyHostToDevice);
+
+
+
+
 
 
         // Start timer...
@@ -387,8 +399,8 @@ int large_gauss_test(int argc, char **argv){
         x[n] as read from the input audio file, and not the padding, 
         so be careful with the size of your memory copy. */
         
-        cudaMemcpy(dev_input_data, input_data, sizeof(cufftComplex) * N, cudaMemcpyHostToDevice);
-        cudaMemset(dev_input_data + ((N+1) * sizeof(cufftComplex)), 0, (padded_length - N) * sizeof(cufftComplex));
+        gpuErrchk(cudaMemcpy(dev_input_data, input_data, sizeof(cufftComplex) * N, cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMemset(&dev_input_data[N], 0, (padded_length - N) * sizeof(cufftComplex)));
         /* TODO: Copy this channel's impulse response data (stored in impulse_data)
         from host memory to the GPU. 
         Like input_data, impulse_data
@@ -396,8 +408,8 @@ int large_gauss_test(int argc, char **argv){
         and not the padding, so again, be careful with the size
         of your memory copy. (It's not the same size as the input_data copy.)
         */
-        cudaMemcpy(dev_impulse_v, impulse_data, sizeof(cufftComplex) * impulse_length, cudaMemcpyHostToDevice);
-        cudaMemset(dev_impulse_v + (sizeof(cufftComplex) * (impulse_length+1)), 0, (padded_length - impulse_length) * sizeof(cufftComplex));
+        gpuErrchk(cudaMemcpy(dev_impulse_v, impulse_data, sizeof(cufftComplex) * impulse_length, cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMemset(&dev_impulse_v[impulse_length], 0, (padded_length - impulse_length) * sizeof(cufftComplex)));
 
 
         /* TODO: Create a cuFFT plan for the forward and inverse transforms. 
@@ -409,8 +421,8 @@ int large_gauss_test(int argc, char **argv){
 
         /* TODO: Run the forward DFT on the input signal and the impulse response. 
         (Do these in-place.) */
-        cufftExecC2C(plan, dev_input_data, dev_input_data, CUFFT_FORWARD);
-        cufftExecC2C(plan, dev_impulse_v, dev_impulse_v, CUFFT_FORWARD);
+        gpuFFTchk(cufftExecC2C(plan, dev_input_data, dev_input_data, CUFFT_FORWARD));
+        gpuFFTchk(cufftExecC2C(plan, dev_impulse_v, dev_impulse_v, CUFFT_FORWARD));
 
 
 
@@ -434,7 +446,7 @@ int large_gauss_test(int argc, char **argv){
 
         /* TODO: Run the inverse DFT on the output signal. 
         (Do this in-place.) */
-        cufftExecC2C(plan, dev_out_data, dev_out_data, CUFFT_INVERSE);
+        gpuFFTchk(cufftExecC2C(plan, dev_out_data, dev_out_data, CUFFT_INVERSE));
         cufftDestroy(plan);
 
 
@@ -466,8 +478,9 @@ int large_gauss_test(int argc, char **argv){
                 #endif
             } else {
                 success = false;
+                if (i % 100 == 0){
                 cerr << "Incorrect output at index " << i << ": " << output_data_host[i] << ", " 
-                    << output_data_testarr[i].x << endl;
+                    << output_data_testarr[i].x << endl;}
             }
         }
 
@@ -656,9 +669,6 @@ int main(int argc, char **argv){
     // Please leave these enabled as a courtesy to your fellow classmates
     // if you are using a shared computer. You may ignore or remove these
     // functions if you are running on your local machine.
-    TA_Utilities::select_coldest_GPU();
-    int max_time_allowed_in_seconds = 90;
-    TA_Utilities::enforce_time_limit(max_time_allowed_in_seconds);
 
     return large_gauss_test(argc, argv);
 }
