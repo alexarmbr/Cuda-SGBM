@@ -38,19 +38,15 @@ cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v,
     cufftComplex *out_data, int padded_length, const unsigned int work_per_thread) {
 
         int tidx = blockIdx.x * blockDim.x + threadIdx.x;
-        tidx *= work_per_thread;
+        tidx *= work_per_thread; // space out threads by work_per_thread
 
         for(int i = 0; i < work_per_thread; i++){
             if (tidx <= padded_length - 1)
             {
-                // check this i did it while sleep deprived
-                out_data[tidx].x = raw_data[tidx].x * impulse_v[tidx].x - raw_data[tidx].y * impulse_v[tidx].y
-                out_data[tidx].y = raw_data[tidx].x * impulse_v[tidx].y - raw_data[tidx].x * impulse_v[tidx].x
-                out_data[tidx] /= padded_length
-                
-                tidx += 1
-
-                
+                out_data[tidx].x = raw_data[tidx].x * impulse_v[tidx].x - raw_data[tidx].y * impulse_v[tidx].y;
+                out_data[tidx].y = raw_data[tidx].x * impulse_v[tidx].y + raw_data[tidx].y * impulse_v[tidx].x;
+                out_data[tidx].x /= padded_length;
+                tidx += 1;
             }
         }
 

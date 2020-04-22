@@ -380,11 +380,6 @@ int large_gauss_test(int argc, char **argv){
         // Start timer...
         START_TIMER();
 
-    // cufftComplex *dev_input_data;
-    // cufftComplex *dev_impulse_v;
-    // cufftComplex *dev_out_data;
-
-
         /* TODO: Copy this channel's input data (stored in input_data)
         from host memory to the GPU.
 
@@ -437,13 +432,10 @@ int large_gauss_test(int argc, char **argv){
         }
 
 
-
-
-
-
         /* TODO: Run the inverse DFT on the output signal. 
         (Do this in-place.) */
-
+        cufftExecC2C(plan, dev_out_data, dev_out_data, CUFFT_INVERSE);
+        cufftDestroy(plan);
 
 
         /* TODO: Destroy the cuFFT plan. */
