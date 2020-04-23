@@ -8,6 +8,7 @@ CUDA_OBJ = cuda.o
 # Input Names
 CUDA_FILES = src/fft_convolve.cu
 CPP_FILES = src/fft_convolve.cpp src/ta_utilities.cpp
+TEST_FILES = src/testing.cpp
 
 # ------------------------------------------------------------------------------
 
@@ -60,6 +61,7 @@ LIBS = -L$(CUDA_LIB_PATH) -lcudart -lcufft -lsndfile
 # C++ Object Files
 OBJ_AUDIO = $(addprefix audio-, $(notdir $(addsuffix .o, $(CPP_FILES))))
 OBJ_NOAUDIO = $(addprefix noaudio-, $(notdir $(addsuffix .o, $(CPP_FILES))))
+TESTING = $(addprefix test-, $(notdir $(addsuffix .o, $(TEST_FILES))))
 
 # Top level rules
 all: audio noaudio
@@ -68,7 +70,10 @@ audio: $(OBJ_AUDIO) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
 	$(GPP) $(FLAGS) -o audio-fft $(INCLUDE) $^ $(LIBS) 
 
 noaudio: $(OBJ_NOAUDIO) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
-	$(GPP) $(FLAGS) -o noaudio-fft $(INCLUDE) $^ $(LIBS) 
+	$(GPP) $(FLAGS) -o noaudio-fft $(INCLUDE) $^ $(LIBS)
+
+test: $(TESTING) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
+	$(GPP) $(FLAGS) -o test-fft $(INCLUDE) $^ $(LIBS)
 
 
 # Compile C++ Source Files
@@ -77,6 +82,12 @@ audio-%.cpp.o: src/%.cpp
 
 noaudio-%.cpp.o: src/%.cpp
 	$(GPP) $(FLAGS) -D AUDIO_ON=0 -c -o $@ $(INCLUDE) $< 
+
+test-%.cpp.o: src/%.cpp
+	$(GPP) $(FLAGS) -D AUDIO_ON=0 -c -o $@ $(INCLUDE) $< 
+
+
+
 
 
 # Compile CUDA Source Files
@@ -92,7 +103,7 @@ $(CUDA_OBJ): $(CUDA_OBJ_FILES)
 
 # Clean everything including temporary Emacs files
 clean:
-	rm -f audio-fft noaudio-fft *.o *~
+	rm -f audio-fft noaudio-fft test-fft *.o *~
 	rm -f src/*~
 
 .PHONY: clean

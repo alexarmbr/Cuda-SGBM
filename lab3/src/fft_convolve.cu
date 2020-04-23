@@ -72,23 +72,20 @@ cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v,
 }
 
 __device__
-void
+float
 get_thread_max(cufftComplex *data, int padded_length){
     
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
-    int total = ceil( (float) padded_length / (gridDim.x * blockDim.x))
-    float current_max = fabs(data[idx].x)
-
+    int total = ceil( (float) padded_length / (gridDim.x * blockDim.x));
+    float current_max = fabs(data[idx].x);
+    
     for(int k = 1; k < total; k++){
 
-        if (idx < (blockIdx + 1) * blockDim.x - 1){
-            
-
+        if (idx < (blockIdx.x + 1) * blockDim.x - 1){
+            current_max = max(current_max, data[idx + k * (gridDim.x * blockDim.x)].x);
         }
-
     }
-
-
+    return current_max;
     }
 
 
@@ -124,9 +121,8 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
 
 
     */
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
-
-
+    float m = get_thread_max(out_data, padded_length);
+    out_data[blockDim.x * blockIdx.x + threadIdx.x].x = m;
 
 
 }
