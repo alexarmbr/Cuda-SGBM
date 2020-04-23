@@ -19,7 +19,7 @@ int main(int argc, char ** argv){
     cudaMemcpy(data, arr, 22 * sizeof(cufftComplex), cudaMemcpyHostToDevice);
     float * maxval;
     *maxval = 983;
-    cudaCallMaximumKernel(3,4,data,maxval,22);
+    cudaCallMaximumKernel(1,3,data,maxval,22);
 
     cufftComplex result_arr[22];
     cudaMemcpy(result_arr, data, 22 * sizeof(cufftComplex), cudaMemcpyDeviceToHost);

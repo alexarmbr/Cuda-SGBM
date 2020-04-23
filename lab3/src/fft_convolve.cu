@@ -75,17 +75,21 @@ __device__
 float
 get_thread_max(cufftComplex *data, int padded_length){
     
+    // gets maximum value for each thread, necessary when
+    // array is larger than the total # of threads
+
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = ceil( (float) padded_length / (gridDim.x * blockDim.x));
     float current_max = fabs(data[idx].x);
     
+    int current_pos = idx;
     for(int k = 1; k < total; k++){
-
-        if (idx < (blockIdx.x + 1) * blockDim.x - 1){
-            current_max = max(current_max, data[idx + k * (gridDim.x * blockDim.x)].x);
+        current_pos += (gridDim.x * blockDim.x);
+        if (current_pos < padded_length){
+            current_max = max(current_max, data[current_pos].x);
         }
     }
-    return current_max;
+    data[idx].x = current_max;
     }
 
 
@@ -121,8 +125,8 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
 
 
     */
-    float m = get_thread_max(out_data, padded_length);
-    out_data[blockDim.x * blockIdx.x + threadIdx.x].x = m;
+    get_thread_max(out_data, padded_length);
+    //out_data[blockDim.x * blockIdx.x + threadIdx.x].x = m;
 
 
 }
