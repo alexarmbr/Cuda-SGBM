@@ -69,10 +69,33 @@ cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v,
 
     */
     
-
-
-
 }
+
+__device__
+void
+get_thread_max(cufftComplex *data, int padded_length){
+    
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int total = ceil( (float) padded_length / (gridDim.x * blockDim.x))
+    float current_max = fabs(data[idx].x)
+
+    for(int k = 1; k < total; k++){
+
+        if (idx < (blockIdx + 1) * blockDim.x - 1){
+            
+
+        }
+
+    }
+
+
+    }
+
+
+
+
+
+
 
 __global__
 void
@@ -80,14 +103,6 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
     int padded_length) {
 
     /* TODO 2: Implement the maximum-finding.
-
-    There are many ways to do this reduction, and some methods
-    have much better performance than others. 
-
-    For this section: Please explain your approach to the reduction,
-    including why you chose the optimizations you did
-    (especially as they relate to GPU hardware).
-
     You'll likely find the above atomicMax function helpful.
     (CUDA's atomicMax function doesn't work for floating-point values.)
     It's based on two principles:
@@ -98,8 +113,20 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
         values is the same. (see http://stackoverflow.com/questions/
         29596797/can-the-return-value-of-float-as-int-be-used-to-
         compare-float-in-cuda)
+    
+    for some blockdim and threadim, how many values will the threads in each
+    block be responsible for taking the max over?
+    ans: padded_length / blockdim
+    
+    for some blockdim and threadim, how many values will each thread be
+    responsible for taking the max over
+    ans: padded_length / blockdim / threaddim
+
 
     */
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+
 
 
 }
@@ -145,7 +172,11 @@ void cudaCallMaximumKernel(const unsigned int blocks,
         const unsigned int padded_length) {
         
 
-    /* TODO 2: Call the max-finding kernel. */
+    cudaMaximumKernel<<<blocks, threadsPerBlock>>>(
+        out_data,
+        max_abs_val,
+        padded_length
+    );
 
 }
 
