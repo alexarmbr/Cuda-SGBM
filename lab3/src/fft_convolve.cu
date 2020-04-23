@@ -24,6 +24,14 @@ __device__ static float atomicMax(float* address, float val)
     int old = *address_as_i, assumed;
     do {
         assumed = old;
+
+        // if the value at address_as_i is still the value of assumed
+        // perform the max operation, store the result at the address
+        // and return assumed
+        
+        // if the value at address_as_i has changed since we loaded it
+        // on line 24, return this new value and assign it to old.
+        // Then assumed != old, so we set assumed = old and try again.
         old = ::atomicCAS(address_as_i, assumed,
             __float_as_int(::fmaxf(val, __int_as_float(assumed))));
     } while (assumed != old);
@@ -72,11 +80,15 @@ cudaProdScaleKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v,
 }
 
 __device__
-float
+void
 get_thread_max(cufftComplex *data, int padded_length){
     
     // gets maximum value for each thread, necessary when
     // array is larger than the total # of threads
+
+    // for a given thread idx, puts the maximum of 
+    // data[idx + k(# threads)] for each k where
+    // (idx + k(# threads)) < (padded_length / 2) at data[idx]
 
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = ceil( (float) padded_length / (gridDim.x * blockDim.x));
@@ -101,7 +113,7 @@ get_thread_max(cufftComplex *data, int padded_length){
 __global__
 void
 cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
-    int padded_length) {
+    int padded_length, int offset) {
 
     /* TODO 2: Implement the maximum-finding.
     You'll likely find the above atomicMax function helpful.
@@ -114,21 +126,38 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
         values is the same. (see http://stackoverflow.com/questions/
         29596797/can-the-return-value-of-float-as-int-be-used-to-
         compare-float-in-cuda)
-    
-    for some blockdim and threadim, how many values will the threads in each
-    block be responsible for taking the max over?
-    ans: padded_length / blockdim
-    
-    for some blockdim and threadim, how many values will each thread be
-    responsible for taking the max over
-    ans: padded_length / blockdim / threaddim
-
 
     */
-    get_thread_max(out_data, padded_length);
-    //out_data[blockDim.x * blockIdx.x + threadIdx.x].x = m;
+    extern __shared__ float shmem[];
+    unsigned int idx = offset + blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+    float first;
+    float second;
 
+    if (idx < padded_length){
+        first = out_data[idx].x;
+    }
+    else{
+        first = -1e7;
+    }
+    
+    if (idx + blockDim.x < padded_length){
+        second = out_data[idx + blockDim.x].x;
+    }
+    else{
+        second = -1e7;
+    }
 
+    shmem[threadIdx.x] = ::fmaxf(first, second);
+    __syncthreads();
+
+    for(unsigned int s = blockDim.x / 2; s > 0; s>>=1){
+        if (threadIdx.x < s){
+            shmem[threadIdx.x] = ::fmaxf(shmem[threadIdx.x], shmem[threadIdx.x + s]);
+        }
+        __syncthreads();
+    }
+    
+    atomicMax(max_abs_val, shmem[0]);
 }
 
 __global__
@@ -170,13 +199,23 @@ void cudaCallMaximumKernel(const unsigned int blocks,
         cufftComplex *out_data,
         float *max_abs_val,
         const unsigned int padded_length) {
+
+        int offset = (blocks * threadsPerBlock * 2);
+        int num_calls = ceil(padded_length / offset);
+
+        for (int i = 0; i < num_calls; i++)
+        {
+            cudaMaximumKernel<<<blocks, threadsPerBlock>>>(
+                out_data,
+                max_abs_val,
+                padded_length,
+                i * offset
+            );
+        }
+
         
 
-    cudaMaximumKernel<<<blocks, threadsPerBlock>>>(
-        out_data,
-        max_abs_val,
-        padded_length
-    );
+
 
 }
 
