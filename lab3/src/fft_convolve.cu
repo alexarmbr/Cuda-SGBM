@@ -134,27 +134,34 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
     float second;
 
     if (idx < padded_length){
-        first = out_data[idx].x;
+        first = fabs(out_data[idx].x);
     }
     else{
-        first = -1e7;
+        first = 0;
     }
     
     if (idx + blockDim.x < padded_length){
-        second = out_data[idx + blockDim.x].x;
+        second = fabs(out_data[idx + blockDim.x].x);
     }
     else{
-        second = -1e7;
+        second = 0;
     }
+
 
     shmem[threadIdx.x] = ::fmaxf(first, second);
     __syncthreads();
 
-    for(unsigned int s = blockDim.x / 2; s > 0; s>>=1){
+    int rem = blockDim.x % 2;
+    unsigned int s = blockDim.x / 2 + rem;
+    while(s > 0){
         if (threadIdx.x < s){
             shmem[threadIdx.x] = ::fmaxf(shmem[threadIdx.x], shmem[threadIdx.x + s]);
         }
+
         __syncthreads();
+        rem = s % 2;
+        if(s == 1) rem = 0;
+        s = s / 2 + rem; // rounded up integer division
     }
     
     atomicMax(max_abs_val, shmem[0]);
@@ -163,7 +170,10 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
 __global__
 void
 cudaDivideKernel(cufftComplex *out_data, float *max_abs_val,
-    int padded_length) {
+    int padded_length, int offset) {
+
+    unsigned int idx = offset + blockIdx.x * blockDim.x + threadIdx.x;
+    out_data[idx].x /= *max_abs_val;
 
     /* TODO 2: Implement the division kernel. Divide all
     data by the value pointed to by max_abs_val. 
@@ -201,11 +211,12 @@ void cudaCallMaximumKernel(const unsigned int blocks,
         const unsigned int padded_length) {
 
         int offset = (blocks * threadsPerBlock * 2);
-        int num_calls = ceil(padded_length / offset);
+        int num_calls = ceil((float)padded_length / offset);
+        size_t shmem_size = threadsPerBlock * sizeof(float);
 
         for (int i = 0; i < num_calls; i++)
         {
-            cudaMaximumKernel<<<blocks, threadsPerBlock>>>(
+            cudaMaximumKernel<<<blocks, threadsPerBlock, shmem_size>>>(
                 out_data,
                 max_abs_val,
                 padded_length,
@@ -226,5 +237,16 @@ void cudaCallDivideKernel(const unsigned int blocks,
         float *max_abs_val,
         const unsigned int padded_length) {
         
-    /* TODO 2: Call the division kernel. */
+        int num_threads = (blocks * threadsPerBlock);
+        int num_calls = ceil((float)padded_length / num_threads);
+
+        for (int i = 0; i < num_calls; i++)
+        {
+            cudaDivideKernel<<<blocks, threadsPerBlock>>>(
+                out_data,
+                max_abs_val,
+                padded_length,
+                i * num_threads
+            );
+        }
 }

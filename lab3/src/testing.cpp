@@ -13,7 +13,7 @@ using namespace std;
 int main(int argc, char ** argv){
     
 
-    int size = 48;
+    int size = 49;
     cufftComplex arr[size];
     for (int i=0; i < size; i++){
         arr[i].x = i;
@@ -29,7 +29,7 @@ int main(int argc, char ** argv){
     cudaMalloc((void **) &dev_max_abs_val, sizeof(float));
     cudaMemset(dev_max_abs_val, 0, sizeof(float));
 
-    cudaCallMaximumKernel(1,24,data,dev_max_abs_val,size);
+    cudaCallMaximumKernel(2,12,data,dev_max_abs_val,size);
 
     float maxval;
     cudaMemcpy(&maxval, dev_max_abs_val, sizeof(float), cudaMemcpyDeviceToHost);

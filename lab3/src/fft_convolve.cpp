@@ -176,16 +176,10 @@ int large_gauss_test(int argc, char **argv){
     parameter to control how many trials we run. */
 
     int nChannels = 2;      // Can set as the number of trials
-    int N = 1e5;        // Can set how many data points arbitrarily
+    int N = 1e6;        // Can set how many data points arbitrarily
     int impulse_length = GAUSSIAN_SIZE;
 
 #endif
-
-
-
-
-
-
 
 
 
@@ -323,41 +317,41 @@ int large_gauss_test(int argc, char **argv){
         /* CPU Blurring */
 
 
-        cout << endl << "CPU convolution..." << endl;
+        // cout << endl << "CPU convolution..." << endl;
 
-        memset(output_data_host, 0, padded_length * sizeof(float));
+        // memset(output_data_host, 0, padded_length * sizeof(float));
 
-        // Use the CUDA machinery for recording time
-        START_TIMER();
+        // // Use the CUDA machinery for recording time
+        // START_TIMER();
 
-        // (For scoping)
+        // // (For scoping)
 
-        {
-            #if 1
+        // {
+        //     #if 1
 
-            for (int i = 0; i < impulse_length; i++){
-                for (int j = 0; j <= i; j++){
-                    output_data_host[i] += input_data[i - j].x 
-                                            * impulse_data[j].x; 
-                }
-            }
-            for (int i = impulse_length; i < N; i++){
-                for (int j = 0; j < impulse_length; j++){
-                    output_data_host[i] += input_data[i - j].x 
-                                            * impulse_data[j].x; 
-                }
-            }
-            for (int i = N; i < padded_length; i++){
-                for (int j = i - (N - 1); j < impulse_length; j++){
-                    output_data_host[i] += input_data[i - j].x 
-                                            * impulse_data[j].x; 
-                }
-            }
+        //     for (int i = 0; i < impulse_length; i++){
+        //         for (int j = 0; j <= i; j++){
+        //             output_data_host[i] += input_data[i - j].x 
+        //                                     * impulse_data[j].x; 
+        //         }
+        //     }
+        //     for (int i = impulse_length; i < N; i++){
+        //         for (int j = 0; j < impulse_length; j++){
+        //             output_data_host[i] += input_data[i - j].x 
+        //                                     * impulse_data[j].x; 
+        //         }
+        //     }
+        //     for (int i = N; i < padded_length; i++){
+        //         for (int j = i - (N - 1); j < impulse_length; j++){
+        //             output_data_host[i] += input_data[i - j].x 
+        //                                     * impulse_data[j].x; 
+        //         }
+        //     }
 
-            #endif
-        }
+        //     #endif
+        // }
 
-        STOP_RECORD_TIMER(cpu_time_ms_convolve);
+        // STOP_RECORD_TIMER(cpu_time_ms_convolve);
 
 
 
@@ -577,7 +571,7 @@ int large_gauss_test(int argc, char **argv){
         where you'll fill in the kernel call for dividing the output
         signal by the previously-calculated maximum. */
         cudaCallDivideKernel(blocks, local_size, dev_out_data,
-            dev_max_abs_val, padded_length);
+        dev_max_abs_val, padded_length);
 
         // Check for errors on kernel call
         err = cudaGetLastError();
