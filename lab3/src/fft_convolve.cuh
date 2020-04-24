@@ -26,7 +26,7 @@ void cudaCallMaximumKernel(const unsigned int blocks,
 void cudaCallDivideKernel(const unsigned int blocks,
         const unsigned int threadsPerBlock,
         cufftComplex *out_data,
-        float *max_abs_val,
+        float max_abs_val,
         const unsigned int padded_length);
 
 #endif

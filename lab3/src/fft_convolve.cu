@@ -169,11 +169,12 @@ cudaMaximumKernel(cufftComplex *out_data, float *max_abs_val,
 
 __global__
 void
-cudaDivideKernel(cufftComplex *out_data, float *max_abs_val,
+cudaDivideKernel(cufftComplex *out_data, float max_abs_val,
     int padded_length, int offset) {
 
     unsigned int idx = offset + blockIdx.x * blockDim.x + threadIdx.x;
-    out_data[idx].x /= *max_abs_val;
+    out_data[idx].x /= max_abs_val;
+    //out_data[idx].x /= 1;
 
     /* TODO 2: Implement the division kernel. Divide all
     data by the value pointed to by max_abs_val. 
@@ -234,7 +235,7 @@ void cudaCallMaximumKernel(const unsigned int blocks,
 void cudaCallDivideKernel(const unsigned int blocks,
         const unsigned int threadsPerBlock,
         cufftComplex *out_data,
-        float *max_abs_val,
+        float max_abs_val,
         const unsigned int padded_length) {
         
         int num_threads = (blocks * threadsPerBlock);

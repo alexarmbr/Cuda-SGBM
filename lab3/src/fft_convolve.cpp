@@ -317,41 +317,41 @@ int large_gauss_test(int argc, char **argv){
         /* CPU Blurring */
 
 
-        // cout << endl << "CPU convolution..." << endl;
+        cout << endl << "CPU convolution..." << endl;
 
-        // memset(output_data_host, 0, padded_length * sizeof(float));
+        memset(output_data_host, 0, padded_length * sizeof(float));
 
-        // // Use the CUDA machinery for recording time
-        // START_TIMER();
+        // Use the CUDA machinery for recording time
+        START_TIMER();
 
-        // // (For scoping)
+        // (For scoping)
 
-        // {
-        //     #if 1
+        {
+            #if 1
 
-        //     for (int i = 0; i < impulse_length; i++){
-        //         for (int j = 0; j <= i; j++){
-        //             output_data_host[i] += input_data[i - j].x 
-        //                                     * impulse_data[j].x; 
-        //         }
-        //     }
-        //     for (int i = impulse_length; i < N; i++){
-        //         for (int j = 0; j < impulse_length; j++){
-        //             output_data_host[i] += input_data[i - j].x 
-        //                                     * impulse_data[j].x; 
-        //         }
-        //     }
-        //     for (int i = N; i < padded_length; i++){
-        //         for (int j = i - (N - 1); j < impulse_length; j++){
-        //             output_data_host[i] += input_data[i - j].x 
-        //                                     * impulse_data[j].x; 
-        //         }
-        //     }
+            for (int i = 0; i < impulse_length; i++){
+                for (int j = 0; j <= i; j++){
+                    output_data_host[i] += input_data[i - j].x 
+                                            * impulse_data[j].x; 
+                }
+            }
+            for (int i = impulse_length; i < N; i++){
+                for (int j = 0; j < impulse_length; j++){
+                    output_data_host[i] += input_data[i - j].x 
+                                            * impulse_data[j].x; 
+                }
+            }
+            for (int i = N; i < padded_length; i++){
+                for (int j = i - (N - 1); j < impulse_length; j++){
+                    output_data_host[i] += input_data[i - j].x 
+                                            * impulse_data[j].x; 
+                }
+            }
 
-        //     #endif
-        // }
+            #endif
+        }
 
-        // STOP_RECORD_TIMER(cpu_time_ms_convolve);
+        STOP_RECORD_TIMER(cpu_time_ms_convolve);
 
 
 
@@ -544,8 +544,8 @@ int large_gauss_test(int argc, char **argv){
         /* TODO 2: Allocate memory to store the maximum magnitude found. 
         (You only need enough space for one floating-point number.) */
 
-        cudaMalloc((void **) &dev_max_abs_val, sizeof(float));
-        cudaMemset(dev_max_abs_val, 0, sizeof(float));
+        gpuErrchk(cudaMalloc((void **) &dev_max_abs_val, sizeof(float)));
+        gpuErrchk(cudaMemset(dev_max_abs_val, 0, sizeof(float)));
         
 
         /* TODO 2: Set it to 0 in preparation for running. 
@@ -570,8 +570,12 @@ int large_gauss_test(int argc, char **argv){
         /* NOTE: This is a function in the fft_convolve_cuda.cu file,
         where you'll fill in the kernel call for dividing the output
         signal by the previously-calculated maximum. */
+        // For testing purposes only
+        gpuErrchk( cudaMemcpy(&max_abs_val_fromGPU, 
+            dev_max_abs_val, 1 * sizeof(float), cudaMemcpyDeviceToHost) );
+        
         cudaCallDivideKernel(blocks, local_size, dev_out_data,
-        dev_max_abs_val, padded_length);
+        max_abs_val_fromGPU, padded_length);
 
         // Check for errors on kernel call
         err = cudaGetLastError();
@@ -585,18 +589,8 @@ int large_gauss_test(int argc, char **argv){
 
         STOP_RECORD_TIMER(gpu_time_ms_norm);
 
-        // For testing purposes only
-        gpuErrchk( cudaMemcpy(&max_abs_val_fromGPU, 
-            dev_max_abs_val, 1 * sizeof(float), cudaMemcpyDeviceToHost) );
-
-
-
-        /* TODO: Now that kernel calls have finished, copy the output
-        signal back from the GPU to host memory. (We store this channel's
-        result in output_data on the host.)
-
-        Note that we have a padded-length signal, so be careful of the
-        size of the memory copy. */
+        //gpuErrchk(cudaMemcpy(output_data_testarr, dev_out_data, padded_length * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
+        cudaMemcpy(output_data, dev_out_data, N * sizeof(cufftComplex), cudaMemcpyDeviceToHost);
 
 
         cout << endl;
