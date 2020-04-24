@@ -2,6 +2,6 @@ Using pytorch in school and at work inspired some curiousity in me about how CUD
 
 lab1 - 1D Convolution<br/>
 lab2 - shared memory matrix transpose<br/>
-lab3 - large kernel convolution using fft trick
+lab3 - large kernel convolution using fft trick and paralelized max
 
 http://courses.cms.caltech.edu/cs179/
