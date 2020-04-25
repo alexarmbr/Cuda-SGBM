@@ -97,8 +97,8 @@ int main(int argc, char *argv[]) {
     status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, point_dim, point_dim, num_points, &one, dev_x1mat, num_points,
     dev_x1mat, num_points, &zero, dev_xx4x4, point_dim);
 
-    status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, point_dim, point_dim, num_points, &one, dev_x2mat, num_points,
-    dev_x1mat, num_points, &zero, dev_x1Tx2, point_dim);
+    status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, point_dim, point_dim, num_points, &one, dev_x1mat, num_points,
+    dev_x2mat, num_points, &zero, dev_x1Tx2, point_dim);
     
     // TODO: Finally, solve the system using LU-factorization! We're solving
     //         xx4x4 . m4x4mat.T = x1Tx2   i.e.   m4x4mat.T = Inverse[xx4x4] . x1Tx2
@@ -201,13 +201,6 @@ int main(int argc, char *argv[]) {
     ///////////////////////////////////////////////////////////////////////////
     // Transform point and print output object file
     ///////////////////////////////////////////////////////////////////////////
-    // cudaMalloc((void **) &dev_x1mat, point_dim * num_points * sizeof(float));
-    // cudaMalloc((void **) &dev_x2mat, point_dim * num_points * sizeof(float));
-    // cudaMalloc((void **) &dev_xx4x4, num_points * num_points * sizeof(float));
-    // cudaMalloc((void **) &dev_x1Tx2, num_points * num_points * sizeof(float));
-
-    // cublasSetMatrix(num_points, point_dim, sizeof(float), x1mat, num_points, dev_x1mat, num_points);
-    // cublasSetMatrix(num_points, point_dim, sizeof(float), x2mat, num_points, dev_x2mat, num_points);
     
     
     // TODO Allocate and Initialize data matrix
@@ -240,10 +233,6 @@ int main(int argc, char *argv[]) {
     float * trans_pt = (float *) malloc(sizeof(float) * num_points * point_dim);
     cudaMemcpy(trans_pt, dev_trans_mat, sizeof(float) * num_points * point_dim, cudaMemcpyDeviceToHost);
     
-    // float * out_transformation;
-    // out_transformation =(float *) malloc(sizeof(float) * point_dim * point_dim);
-    // cudaMemcpy(out_transformation, dev_x1Tx2, sizeof(float) * point_dim * point_dim, cudaMemcpyDeviceToHost);
-
     // get Object from transformed vertex matrix
     Object trans_obj = obj_from_vertex_array(trans_pt, num_points, point_dim, obj1);
 
