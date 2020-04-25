@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
     // TODO Allocate and Initialize data matrix
     float * dev_pt;
     cudaMalloc((void **) &dev_pt, point_dim * num_points * sizeof(float));
-    cublasSetMatrix(num_points, point_dim, sizeof(float), x1mat, num_points, dev_pt, num_points);
+    cublasSetMatrix(num_points, point_dim, sizeof(float), x2mat, num_points, dev_pt, num_points);
     
     // TODO Allocate and Initialize transformation matrix
     float * dev_trans_mat;
