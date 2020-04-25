@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <stdio.h>
 #include <fstream>
+#include <assert.h>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -64,7 +65,8 @@ int main(int argc, char *argv[]) {
 
     // TODO: Initialize cublas handle
     cublasHandle_t handle;
-    status = cublasCreate(&handle);
+    cublasStatus_t status = cublasCreate(&handle);
+    cusolverStatus_t solver_status = CUSOLVER_STATUS_SUCCESS;
 
     float * dev_x1mat;
     float * dev_x2mat;
@@ -93,108 +95,168 @@ int main(int argc, char *argv[]) {
     //   x1Tx2 = Transpose[x1mat] . x2mat
 
     status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, point_dim, point_dim, num_points, &one, dev_x1mat, num_points,
-    dev_x1mat, num_points, &zero, dev_xx4x4);
+    dev_x1mat, num_points, &zero, dev_xx4x4, point_dim);
 
     status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, point_dim, point_dim, num_points, &one, dev_x2mat, num_points,
-    dev_x1mat, num_points, &zero, dev_x1Tx2);
+    dev_x1mat, num_points, &zero, dev_x1Tx2, point_dim);
     
+    // TODO: Finally, solve the system using LU-factorization! We're solving
+    //         xx4x4 . m4x4mat.T = x1Tx2   i.e.   m4x4mat.T = Inverse[xx4x4] . x1Tx2
+    //
+    //       Factorize xx4x4 into an L and U matrix, ie.  xx4x4 = LU
+    //
+    //       Then, solve the following two systems at once using cusolver's getrs
+    //           L . temp  =  P . x1Tx2
+    //       And then then,
+    //           U . m4x4mat = temp
+    //
+    //       Generally, pre-factoring a matrix is a very good strategy when
+    //       it is needed for repeated solves.
 
 
+    // TODO: Make handle for cuSolver
+    cusolverDnHandle_t solver_handle = NULL;
+    cusolverDnCreate(&solver_handle);
 
 
+    // TODO: Initialize work buffer using cusolverDnSgetrf_bufferSize
+    float * work;
+    int Lwork;
+
+    solver_status = cusolverDnSgetrf_bufferSize(solver_handle, point_dim, point_dim, dev_xx4x4, point_dim, &Lwork);
+    assert(CUSOLVER_STATUS_SUCCESS == solver_status);
+    // TODO: compute buffer size and prepare memory
+
+    cudaMalloc((void **) &work, sizeof(double) * Lwork);
 
 
-    // // TODO: Finally, solve the system using LU-factorization! We're solving
-    // //         xx4x4 . m4x4mat.T = x1Tx2   i.e.   m4x4mat.T = Inverse[xx4x4] . x1Tx2
-    // //
-    // //       Factorize xx4x4 into an L and U matrix, ie.  xx4x4 = LU
-    // //
-    // //       Then, solve the following two systems at once using cusolver's getrs
-    // //           L . temp  =  P . x1Tx2
-    // //       And then then,
-    // //           U . m4x4mat = temp
-    // //
-    // //       Generally, pre-factoring a matrix is a very good strategy when
-    // //       it is needed for repeated solves.
-
-    // // TODO: Make handle for cuSolver
-    // cusolverDnHandle_t solver_handle;
+    // TODO: Initialize memory for pivot array, with a size of point_dim
+    int * pivots;
+    cudaMalloc((void **) &pivots, sizeof(int) * point_dim);
 
 
-    // // TODO: Initialize work buffer using cusolverDnSgetrf_bufferSize
-    // float * work;
-    // int Lwork;
-
-    // // TODO: compute buffer size and prepare memory
+    int *info = NULL;
 
 
-    // // TODO: Initialize memory for pivot array, with a size of point_dim
-    // int * pivots;
+    // TODO: Now, call the factorizer cusolverDnSgetrf, using the above initialized data
+    solver_status = cusolverDnSgetrf(
+        solver_handle,
+        point_dim,
+        point_dim,
+        dev_xx4x4,
+        point_dim,
+        work,
+        pivots,
+        info);
+
+    assert(CUSOLVER_STATUS_SUCCESS == solver_status);
 
 
-    // int *info;
+    // solve 4 rhs simultaneously, equation of form
+    // A * B = C, dimensions
+    // 4x4 * 4x4 = 4x4
+    // TODO: Finally, solve the factorized version using a direct call to cusolverDnSgetrs
+    solver_status = cusolverDnSgetrs(
+        solver_handle,
+        CUBLAS_OP_N,
+        point_dim,
+        point_dim,
+        dev_xx4x4,
+        point_dim,
+        pivots,
+        dev_x1Tx2,
+        point_dim,
+        info
+    );
+
+    //assert(*info == 0);
+    assert(CUSOLVER_STATUS_SUCCESS == solver_status);
+
+    // TODO: Destroy the cuSolver handle
+    cusolverDnDestroy(solver_handle);
+
+    // TODO: Copy final transformation back to host. Note that at this point
+    // the transformation matrix is transposed
+    float * out_transformation;
+    out_transformation =(float *) malloc(sizeof(float) * point_dim * point_dim);
+    cudaMemcpy(out_transformation, dev_x1Tx2, sizeof(float) * point_dim * point_dim, cudaMemcpyDeviceToHost);
 
 
-    // // TODO: Now, call the factorizer cusolverDnSgetrf, using the above initialized data
+    // TODO: Don't forget to set the bottom row of the final transformation
+    //       to [0,0,0,1] (right-most columns of the transposed matrix)
+    out_transformation[12] = 0;
+    out_transformation[13] = 0;
+    out_transformation[14] = 0;
+    out_transformation[15] = 1;
 
 
-    // // TODO: Finally, solve the factorized version using a direct call to cusolverDnSgetrs
+    // Print transformation in row order.
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            std::cout << out_transformation[i * point_dim + j] << " ";
+        }
+        std::cout << "\n";
+    }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Transform point and print output object file
+    ///////////////////////////////////////////////////////////////////////////
+    // cudaMalloc((void **) &dev_x1mat, point_dim * num_points * sizeof(float));
+    // cudaMalloc((void **) &dev_x2mat, point_dim * num_points * sizeof(float));
+    // cudaMalloc((void **) &dev_xx4x4, num_points * num_points * sizeof(float));
+    // cudaMalloc((void **) &dev_x1Tx2, num_points * num_points * sizeof(float));
 
-    // // TODO: Destroy the cuSolver handle
+    // cublasSetMatrix(num_points, point_dim, sizeof(float), x1mat, num_points, dev_x1mat, num_points);
+    // cublasSetMatrix(num_points, point_dim, sizeof(float), x2mat, num_points, dev_x2mat, num_points);
+    
+    
+    // TODO Allocate and Initialize data matrix
+    float * dev_pt;
+    cudaMalloc((void **) &dev_pt, point_dim * num_points * sizeof(float));
+    cublasSetMatrix(num_points, point_dim, sizeof(float), x1mat, num_points, dev_pt, num_points);
 
+    // TODO Allocate and Initialize transformation matrix
+    float * dev_trans_mat;
+    cudaMalloc((void **) &dev_trans_mat, point_dim * point_dim * sizeof(float));
+    cublasSetMatrix(point_dim, point_dim, sizeof(float), out_transformation, point_dim, dev_trans_mat, point_dim);
 
-    // // TODO: Copy final transformation back to host. Note that at this point
-    // // the transformation matrix is transposed
+    // TODO Allocate and Initialize transformed points
+    float * dev_trans_pt;
+    cudaMalloc((void **) &dev_trans_pt, point_dim * num_points * sizeof(float));
+
+    float one_d = 1;
+    float zero_d = 0;
+
+    // TODO Transform point matrix
+    //          (4x4 trans_mat) . (nx4 pointzx matrix)^T = (4xn transformed points)
+
+    
+    status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, point_dim, num_points, point_dim, &one_d, dev_trans_mat, point_dim,
+        dev_pt, num_points, &zero_d, dev_trans_mat, point_dim);
+    assert(CUBLAS_STATUS_SUCCESS == status);
+    
+    
+    // So now dev_trans_pt has shape (4 x n)
+    float * trans_pt = (float *) malloc(sizeof(float) * num_points * point_dim);
+    cudaMemcpy(trans_pt, dev_trans_mat, sizeof(float) * num_points * point_dim, cudaMemcpyDeviceToHost);
+    
     // float * out_transformation;
+    // out_transformation =(float *) malloc(sizeof(float) * point_dim * point_dim);
+    // cudaMemcpy(out_transformation, dev_x1Tx2, sizeof(float) * point_dim * point_dim, cudaMemcpyDeviceToHost);
 
-    // // TODO: Don't forget to set the bottom row of the final transformation
-    // //       to [0,0,0,1] (right-most columns of the transposed matrix)
+    // get Object from transformed vertex matrix
+    Object trans_obj = obj_from_vertex_array(trans_pt, num_points, point_dim, obj1);
 
+    // print Object to output file
+    std::ofstream obj_file (output_filename);
+    print_obj_data(trans_obj, obj_file);
 
-    // // Print transformation in row order.
-    // for (int i = 0; i < 4; i++) {
-    //     for (int j = 0; j < 4; j++) {
-    //         std::cout << out_transformation[i * point_dim + j] << " ";
-    //     }
-    //     std::cout << "\n";
-    // }
-
-    // ///////////////////////////////////////////////////////////////////////////
-    // // Transform point and print output object file
-    // ///////////////////////////////////////////////////////////////////////////
-
-    // // TODO Allocate and Initialize data matrix
-    // float * dev_pt;
-
-    // // TODO Allocate and Initialize transformation matrix
-    // float * dev_trans_mat;
-
-    // // TODO Allocate and Initialize transformed points
-    // float * dev_trans_pt;
-
-    // float one_d = 1;
-    // float zero_d = 0;
-
-    // // TODO Transform point matrix
-    // //          (4x4 trans_mat) . (nx4 pointzx matrix)^T = (4xn transformed points)
-
-    // // So now dev_trans_pt has shape (4 x n)
-    // float * trans_pt; 
-
-    // // get Object from transformed vertex matrix
-    // Object trans_obj = obj_from_vertex_array(trans_pt, num_points, point_dim, obj1);
-
-    // // print Object to output file
-    // std::ofstream obj_file (output_filename);
-    // print_obj_data(trans_obj, obj_file);
-
-    // free CPU memory
+    //free CPU memory
     free(trans_pt);
 
-    ///////////////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////////////
     // Free Memory
-    ///////////////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////////////
 
     // TODO: Free GPU memory
 
