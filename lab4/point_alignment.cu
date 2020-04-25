@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
     float * dev_pt;
     cudaMalloc((void **) &dev_pt, point_dim * num_points * sizeof(float));
     cublasSetMatrix(num_points, point_dim, sizeof(float), x1mat, num_points, dev_pt, num_points);
-
+    
     // TODO Allocate and Initialize transformation matrix
     float * dev_trans_mat;
     cudaMalloc((void **) &dev_trans_mat, point_dim * point_dim * sizeof(float));
@@ -225,13 +225,13 @@ int main(int argc, char *argv[]) {
 
     
     status = cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, point_dim, num_points, point_dim, &one_d, dev_trans_mat, point_dim,
-        dev_pt, num_points, &zero_d, dev_trans_mat, point_dim);
+        dev_pt, num_points, &zero_d, dev_trans_pt, point_dim);
     assert(CUBLAS_STATUS_SUCCESS == status);
     
     
     // So now dev_trans_pt has shape (4 x n)
     float * trans_pt = (float *) malloc(sizeof(float) * num_points * point_dim);
-    cudaMemcpy(trans_pt, dev_trans_mat, sizeof(float) * num_points * point_dim, cudaMemcpyDeviceToHost);
+    cudaMemcpy(trans_pt, dev_trans_pt, sizeof(float) * num_points * point_dim, cudaMemcpyDeviceToHost);
     
     // get Object from transformed vertex matrix
     Object trans_obj = obj_from_vertex_array(trans_pt, num_points, point_dim, obj1);
