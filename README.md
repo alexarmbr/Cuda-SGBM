@@ -3,6 +3,7 @@ Using pytorch in school and at work inspired some curiousity in me about how CUD
 lab1 - 1D Convolution<br/>
 lab2 - shared memory matrix transpose<br/>
 lab3 - large kernel convolution using fft trick and paralelized max<br/>
-lab4 - point cloud alignment using cuBLAS
+lab4 - point cloud alignment using cuBLAS<br/>
+lab5/6 - simple neural network with cuBLAS and cuDNN backend
 
 http://courses.cms.caltech.edu/cs179/

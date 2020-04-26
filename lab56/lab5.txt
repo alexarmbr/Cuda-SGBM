@@ -1,0 +1,104 @@
+CS 179: GPU Computing
+Labs 5-6: Introduction to Machine Learning and cuDNN
+Written by: Aadyot Bhatnagar
+
+Due: Wednesday, May 8, 2019 @ 3pm (Lab 5)
+     Wednesday, May 15, 2019 @ 3pm (Lab 6)
+
+Submission:
+--------------------------------------------------------------------------------
+
+Instead of emailing us the solution, put a zip file in your home directory
+on Titan, in the format:
+
+lab5_2019_submission.zip
+
+and
+
+lab6_2019_submission.zip
+
+Your submission for each lab should be a single archive file (.zip)
+with your README file and all code.
+
+Resources:
+--------------------------------------------------------------------------------
+You will be using the MNIST dataset of handwritten digits. This can be found on
+Titan in the directory /srv/cs179_mnist, though it is included as a default
+option for you. If you are running this on your own machine, you can download
+the dataset yourself from http://yann.lecun.com/exdb/mnist/ and just put all 4
+of the files into a single directory, which you should specify using the --dir
+command line argument when running the executable.
+
+To set up cuDNN on your own, create an NVIDIA developer account and visit
+https://developer.nvidia.com/cudnn. Then, download the most recent release
+corresponding to your version of CUDA (you may have to check archived releases
+for versions of CUDA older than 9.0), download the archive for your OS, and
+follow the installation instructions provided.
+
+Usage:
+--------------------------------------------------------------------------------
+The executable for lab 5 will be bin/dense-neuralnet. For lab 6, it will be
+bin/conv-neuralnet. To call them, you should use the command
+bin/<type>-neuralnet [--dir <mnist_directory>] [--act <"relu" or "tanh">]
+The --dir argument sets the directory from which the MNIST data will be read,
+while the --act argument sets the activation that this neural network will use
+for intermediate layers ("tanh" or "relu"). The default activation is relu.
+
+Overview:
+--------------------------------------------------------------------------------
+In labs 5 and 6, you will be writing a number of cuBLAS and cuDNN calls (as
+well as a couple of kernels) to fill out the missing parts of this neural
+network library. These calls will implement the core functionality of the
+forward pass and backward pass for the network. Once implemented, you will be
+able to run the main file to fit a neural network on the MNIST data set of
+handwritten digits, and evaluate your network's out-of-sample performance on a
+separate subset of the data.
+
+There are a number of TODO's listed in the files layers.cpp and utils.cu. Your
+job is to fill all of these out with the necessary code (either from the CUDA
+libraries we discussed in class or via writing your own kernels). Some of these
+TODO's will be labeled as lab 5, and others will be labeled as lab 6, indicating
+which assignment they are meant to be filled out for. The final executables for
+labs 5 and 6 will be bin/dense-neuralnet and bin/conv-neuralnet, respectively.
+Both executables should compile regardless of how much of lab 5 or 6 has been
+completed, but obviously they won't run correctly until the relevant code has
+been written completely.
+
+Note that lab 6 will not run correctly without lab 5 working fully! If your lab
+5 doesn't work by the time you've turned it in, contact the TA's to receive a
+fully functional lab 5 to build on for lab 6 (i.e. you need to turn in lab 5
+for a grade before receiving solutions).
+
+It's also worth noting that the supporting code for this lab may be larger than
+you are used to working with. The only files you really need to understand are
+layers.hpp, layers.cpp, utils.cuh, and utils.cu. The basics of how these files
+are meant to work are outlined in the README included with this lab.
+
+Unfortunately, we haven't had the time to come up with any systematic way to
+help you debug your code for these assignments. That said, here are a few
+guidelines to follow that will make your life much easier:
+
+1)  Wrap all of your CUDA calls and CUDA library calls with the appropriate
+    error checking macros! These are defined in helper_cuda.h and have been
+    adapted from the CUDA examples.
+
+2)  If your code is working 100% correctly, you should expect to see the loss
+    decreasing and accuracy increasing with every iteration of training. If
+    your loss is increasing or turning into NaN's, check the following:
+
+    a)  Are you adding the gradient into the current values of the weights and
+        biases instead of subtracting them (don't do gradient ascent instead
+        of descent, since we want to MINIMIZE the loss)?
+
+    b)  Make sure you're not adding the gradients with respect to the data
+        (i.e. the input and output minibatches of a given layer) into the
+        data itself!
+
+    c)  Especially for lab 5, make sure that your cuBLAS calls match the linear
+        algebra operations described in the slides. We've made an effort to
+        have notation be relatively consistent between the lecture slides and 
+        the code.
+
+3)  Refer to the lecture slides frequently! There are slides in each of lectures
+    15 and 17 (for labs 5 and 6 respectively) that outline the actual algorithms
+    you need to implement.
