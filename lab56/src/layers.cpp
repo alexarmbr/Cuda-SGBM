@@ -174,8 +174,7 @@ void Layer::allocate_buffers()
 
     // out_batch and grad_out_batch have the same shape as the output
     int out_size = n * c * h * w;
-    CUDA_CALL( cudaMalloc(&out_batch, 
-     * sizeof(float)) );
+    CUDA_CALL( cudaMalloc(&out_batch, out_size * sizeof(float)) );
     CUDA_CALL( cudaMalloc(&grad_out_batch, out_size * sizeof(float)) );
 
     // Allocate buffers for the weights and biases (if there are any)
@@ -238,7 +237,7 @@ Input::Input(int n, int c, int h, int w,
     // TODO (set 5): set output tensor descriptor out_shape to have format
     //               NCHW, be floats, and have dimensions n, c, h, w
     // out_shape has already been initialized in constructor
-    cudnnSetTensor4dDescriptor(&out_shape,
+    cudnnSetTensor4dDescriptor(out_shape,
     CUDNN_TENSOR_NCHW,
     CUDNN_DATA_FLOAT,
     n, c, h, w);
@@ -356,8 +355,8 @@ void Dense::backward_pass(float learning_rate)
         grad_out_batch, out_size,
         &zero,
         grad_weights,
-        in_size);
-    )
+        in_size)
+    );
 
     // grad_biases = grad_out_batch * 1_vec
     CUBLAS_CALL( cublasSgemv(cublasHandle, CUBLAS_OP_N,
@@ -389,10 +388,10 @@ void Dense::backward_pass(float learning_rate)
     // TODO (set 5): weights = weights + eta * grad_weights
 
     CUBLAS_CALL( cublasSgeam(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
-    in_size, out_size, &one, weights, in_size, grad_weights, in_size, &eta, weights, in_size) );
+    in_size, out_size, &one, weights, in_size, &eta, grad_weights, in_size, weights, in_size) );
 
-    CUBLAS_CALL( cublasSaxpy(cublasHandle, &eta,
-    out_size, grad_biases, 1, biases, 1));
+    CUBLAS_CALL( cublasSaxpy(cublasHandle, out_size, &eta,
+    grad_biases, 1, biases, 1));
 
     // TODO (set 5): biases = biases + eta * grad_biases
 }
