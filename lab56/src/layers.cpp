@@ -413,7 +413,7 @@ Activation::Activation(Layer *prev, cudnnActivationMode_t activationMode,
 
     // TODO (set 5): get descriptor of input minibatch, in_shape
     CUDNN_CALL( cudnnGetTensor4dDescriptor(in_shape, &dtype, &n, &c, &h, &w,
-    &n_stride, &c_stride, &h_stride, &w_stride) );
+    &nStride, &cStride, &hStride, &wStride) );
 
     // TODO (set 5): set descriptor of output minibatch, out_shape, to have the
     //               same parameters as in_shape and be ordered NCHW
@@ -463,9 +463,8 @@ void Activation::backward_pass(float learning_rate)
     cudnnActivationBackward(cudnnHandle, activation_desc,
     &one, out_shape, out_batch,
     out_shape, grad_out_batch,
-    &zero,
-    in_shape, in_shape,
-    in_shape, grad_in_batch;)
+    in_shape, in_shape, &zero,
+    in_shape, grad_in_batch);
 
     // TODO (set 5): do activation backwards, i.e. compute grad_in_batch
 }
