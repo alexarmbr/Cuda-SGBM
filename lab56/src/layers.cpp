@@ -412,19 +412,31 @@ Activation::Activation(Layer *prev, cudnnActivationMode_t activationMode,
     int n, c, h, w, nStride, cStride, hStride, wStride;
 
     // TODO (set 5): get descriptor of input minibatch, in_shape
+    CUDNN_CALL( cudnnGetTensor4dDescriptor(in_shape, &dtype, &n, &c, &h, &w,
+    &n_stride, &c_stride, &h_stride, &w_stride) );
 
     // TODO (set 5): set descriptor of output minibatch, out_shape, to have the
     //               same parameters as in_shape and be ordered NCHW
+    CUDNN_CALL( cudnnSetTensor4dDescriptor(in_shape, CUDNN_TENSOR_NCHW,
+    dtype, n, c, h, w) );
 
     allocate_buffers();
 
     // TODO (set 5): create activation descriptor, and set it to have the given
     //               activationMode, propagate NaN's, and have coefficient coef
+    cudnnActivationDescriptor_t activation_desc;
+    cudnnCreateActivationDescriptor(&activation_desc);
+    cudnnSetActivationDescriptor(activation_desc,
+    activationMode,
+    CUDNN_PROPAGATE_NAN, 0.0);
+
+
 }
 
 Activation::~Activation()
 {
     // TODO (set 5): destroy the activation descriptor
+    cudnnDestroyActivationDescriptor(activation_desc);
 }
 
 /**
@@ -434,8 +446,9 @@ Activation::~Activation()
 void Activation::forward_pass()
 {
     float one = 1.0, zero = 0.0;
-
     // TODO (set 5): apply activation, i.e. out_batch = activation(in_batch)
+    cudnnActivationForward(cudnnHandle, activation_desc,
+    &one, in_shape, in_batch, &zero, out_shape, out_batch);
 }
 
 /**
@@ -447,6 +460,12 @@ void Activation::forward_pass()
 void Activation::backward_pass(float learning_rate)
 {
     float one = 1.0, zero = 0.0;
+    cudnnActivationBackward(cudnnHandle, activation_desc,
+    &one, out_shape, out_batch,
+    out_shape, grad_out_batch,
+    &zero,
+    in_shape, in_shape,
+    in_shape, grad_in_batch;)
 
     // TODO (set 5): do activation backwards, i.e. compute grad_in_batch
 }
