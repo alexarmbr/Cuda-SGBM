@@ -37,13 +37,18 @@ Layer::Layer(Layer *prev, cublasHandle_t cublasHandle,
     this->cublasHandle = cublasHandle;
     this->cudnnHandle = cudnnHandle;
 
+    // allocate tensor descriptor for this layer
     CUDNN_CALL( cudnnCreateTensorDescriptor(&in_shape) );
     if (prev)
     {
         cudnnDataType_t dtype;
         int n, c, h, w, nStride, cStride, hStride, wStride;
+        
+        // get n,c,h,w from previous layer
         CUDNN_CALL( cudnnGetTensor4dDescriptor(prev->get_out_shape(), &dtype,
             &n, &c, &h, &w, &nStride, &cStride, &hStride, &wStride) );
+        
+        // initialize tensor descriptor for this layer
         CUDNN_CALL( cudnnSetTensor4dDescriptor(in_shape, CUDNN_TENSOR_NCHW,
             dtype, n, c, h, w) );
     }
@@ -162,12 +167,15 @@ void Layer::allocate_buffers()
     // Get the shape of the output
     cudnnDataType_t dtype;
     int n, c, h, w, n_stride, c_stride, h_stride, w_stride;
+
+    // this has already by allocated and initialized in constructor
     CUDNN_CALL( cudnnGetTensor4dDescriptor(out_shape, &dtype,
         &n, &c, &h, &w, &n_stride, &c_stride, &h_stride, &w_stride) );
 
     // out_batch and grad_out_batch have the same shape as the output
     int out_size = n * c * h * w;
-    CUDA_CALL( cudaMalloc(&out_batch, out_size * sizeof(float)) );
+    CUDA_CALL( cudaMalloc(&out_batch, 
+     * sizeof(float)) );
     CUDA_CALL( cudaMalloc(&grad_out_batch, out_size * sizeof(float)) );
 
     // Allocate buffers for the weights and biases (if there are any)
@@ -229,6 +237,11 @@ Input::Input(int n, int c, int h, int w,
 {
     // TODO (set 5): set output tensor descriptor out_shape to have format
     //               NCHW, be floats, and have dimensions n, c, h, w
+    // out_shape has already been initialized in constructor
+    cudnnSetTensor4dDescriptor(&out_shape,
+    CUDNN_TENSOR_NCHW,
+    CUDNN_DATA_FLOAT,
+    n, c, h, w);
 
     allocate_buffers();
 }
@@ -257,8 +270,14 @@ Dense::Dense(Layer *prev, int out_dim,
     // Get the input shape for the layer and flatten it if needed
     cudnnDataType_t dtype;
     int n, c, h, w, n_stride, c_stride, h_stride, w_stride;
+    
+    
+    // allocated and initialized in constructor to be n,c,h,w given by prev -> out_shape()
     CUDNN_CALL( cudnnGetTensor4dDescriptor(in_shape, &dtype, &n, &c, &h, &w,
         &n_stride, &c_stride, &h_stride, &w_stride) );
+
+    // flatten each training example, 
+    // go from X[n,c,h,w] to X[n, c * h * w, 1, 1]
     CUDNN_CALL( cudnnSetTensor4dDescriptor(in_shape, CUDNN_TENSOR_NCHW,
         dtype, n, c * h * w, 1, 1) );
 
@@ -297,6 +316,14 @@ void Dense::forward_pass()
     float one = 1.0, zero = 0.0;
 
     // TODO (set 5): out_batch = weights^T * in_batch (without biases)
+        CUBLAS_CALL( cublasSgemm(cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
+        out_size, batch_size, in_size,
+        &one,
+        weights, in_size,
+        in_batch, in_size,
+        &zero,
+        out_batch, out_size) );
+
 
     // out_batch += bias * 1_vec^T (to distribute bias to all outputs in
     // this minibatch of data)
@@ -321,6 +348,17 @@ void Dense::backward_pass(float learning_rate)
 
     // TODO (set 5): grad_weights = in_batch * (grad_out_batch)^T
 
+    CUBLAS_CALL( cublasSgemm(
+        cublasHandle, CUBLAS_OP_N, CUBLAS_OP_T,
+        in_size, out_size, batch_size,
+        &one,
+        in_batch, in_size,
+        grad_out_batch, out_size,
+        &zero,
+        grad_weights,
+        in_size);
+    )
+
     // grad_biases = grad_out_batch * 1_vec
     CUBLAS_CALL( cublasSgemv(cublasHandle, CUBLAS_OP_N,
         out_size, batch_size,
@@ -330,6 +368,17 @@ void Dense::backward_pass(float learning_rate)
         &zero,
         grad_biases, 1) );
 
+    CUBLAS_CALL( cublasSgemm(
+        cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
+        in_size, batch_size, out_size,
+        &one,
+        weights, out_size,
+        grad_out_batch, out_size,
+        &zero,
+        grad_in_batch,
+        in_size
+    )
+    );
     // TODO (set 5): grad_in_batch = W * grad_out_batch
     // Note that grad_out_batch is the next layer's grad_in_batch, and
     // grad_in_batch is the previous layer's grad_out_batch
@@ -338,6 +387,12 @@ void Dense::backward_pass(float learning_rate)
     float eta = -learning_rate;
 
     // TODO (set 5): weights = weights + eta * grad_weights
+
+    CUBLAS_CALL( cublasSgeam(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+    in_size, out_size, &one, weights, in_size, grad_weights, in_size, &eta, weights, in_size) );
+
+    CUBLAS_CALL( cublasSaxpy(cublasHandle, &eta,
+    out_size, grad_biases, 1, biases, 1));
 
     // TODO (set 5): biases = biases + eta * grad_biases
 }
