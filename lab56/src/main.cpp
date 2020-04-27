@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     std::string activation = "relu";
 
     // Directory in which training and testing data are stored (default is this)
-    std::string dirname = "/srv/cs179_mnist";
+    std::string dirname = "data";
 
     // Parse command line arguments
     for (int i = 1; i < argc; ++i)
@@ -39,14 +39,14 @@ int main(int argc, char **argv)
     // Load training set
     int n_train, c, h, w, n_classes;
     float *train_X, *train_Y;
-    LoadMNISTData(dirname + "/train-images.idx3-ubyte",
-        dirname + "/train-labels.idx1-ubyte",
+    LoadMNISTData(dirname + "/train-images-idx3-ubyte",
+        dirname + "/train-labels-idx1-ubyte",
         n_train, c, h, w, n_classes, &train_X, &train_Y);
     std::cout << "Loaded training set." << std::endl;
 
     // Initialize a model to classify the MNIST dataset
     Model *model = new Model(200, c, h, w);
-#if CONV
+#if 0
     model->add("conv", { 20, 5, 1 });
     model->add("max pool", { 2 });
     model->add(activation);
@@ -67,8 +67,8 @@ int main(int argc, char **argv)
     // Load test set
     int n_test;
     float *test_X, *test_Y;
-    LoadMNISTData(dirname + "/test-images.idx3-ubyte",
-        dirname + "/test-labels.idx1-ubyte",
+    LoadMNISTData(dirname + "/test-images-idx3-ubyte",
+        dirname + "/test-labels-idx1-ubyte",
         n_test, c, h, w, n_classes, &test_X, &test_Y);
     std::cout << "Loaded test set." << std::endl;
 

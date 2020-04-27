@@ -11,9 +11,14 @@
 #include <thrust/fill.h>
 #include <algorithm>
 #include "helper_cuda.h"
+#include <iostream>
 
 // CUDA block width
 #define BW 1024
+
+using std::cerr;
+using std::cout;
+using std::endl;
 
 /**
  * Sets all entries in a device buffer of floats equal to a specified value.
@@ -42,7 +47,7 @@ float CrossEntropyLoss(float* pred_Y, float* true_Y, int n, int c, int h, int w)
     // Inialize loss on the device to be zero
     float loss, *d_loss;
     CUDA_CALL( cudaMalloc(&d_loss, sizeof(float)) );
-    cudaMemsetType<float>(d_loss, 0.0, 1);
+    cudaMemsetType<float>(d_loss, 2.0, 1);
 
     // Accumulate the total loss on the device by invoking a kernel
     int n_blocks = std::min(65535, (n * c * h * w + BW  - 1) / BW);
@@ -82,6 +87,13 @@ float SoftThresholdAccuracy(float* pred_Y, float* true_Y,
     int n_blocks = std::min(65535, (n * c * h * w + BW - 1) / BW);
     SoftThresholdAccKernel<<<n_blocks, BW, BW * sizeof(float)>>>(pred_Y, true_Y,
         d_acc, n, c, h, w);
+    
+    cudaError_t err = cudaGetLastError();
+    if  (cudaSuccess != err){
+            cerr << "Error " << cudaGetErrorString(err) << endl;
+    } else {
+            cerr << "No kernel error detected" << endl;
+    }
 
     // Copy back the accumulated accuracy on the device back to the host
     CUDA_CALL(cudaMemcpy(&acc, d_acc, sizeof(float), cudaMemcpyDeviceToHost));

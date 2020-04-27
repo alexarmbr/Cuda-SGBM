@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <random>
+#include <iostream>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -21,7 +22,15 @@
 #include "utils.cuh"
 #include "helper_cuda.h"
 
-
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+    if (code != cudaSuccess) 
+    {
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        exit(code);
+    }
+}
 /******************************************************************************/
 /*                          GENERIC LAYER SUPERCLASS                          */
 /******************************************************************************/
@@ -248,7 +257,8 @@ Input::Input(int n, int c, int h, int w,
 Input::~Input() = default;
 
 /** Input layer does no processing on its input. */
-void Input::forward_pass() {}
+void Input::forward_pass() {std::cout << "input forward \n";}
+//void Input::forward_pass() {}
 
 /** Nothing is behind the input layer. */
 void Input::backward_pass(float learning_rate) {}
@@ -313,6 +323,7 @@ Dense::~Dense()
 void Dense::forward_pass()
 {
     float one = 1.0, zero = 0.0;
+    std::cout << "dense forward \n";
 
     // TODO (set 5): out_batch = weights^T * in_batch (without biases)
         CUBLAS_CALL( cublasSgemm(cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
@@ -333,6 +344,7 @@ void Dense::forward_pass()
         onevec, batch_size,
         &one,
         out_batch, out_size) );
+        std::cout << "end dense forward \n";
 }
 
 /**
@@ -343,6 +355,7 @@ void Dense::forward_pass()
  */
 void Dense::backward_pass(float learning_rate)
 {
+    std::cout << "dense backward \n";
     float one = 1.0, zero = 0.0;
 
     // TODO (set 5): grad_weights = in_batch * (grad_out_batch)^T
@@ -392,6 +405,7 @@ void Dense::backward_pass(float learning_rate)
 
     CUBLAS_CALL( cublasSaxpy(cublasHandle, out_size, &eta,
     grad_biases, 1, biases, 1));
+    std::cout << "dense backward end \n";
 
     // TODO (set 5): biases = biases + eta * grad_biases
 }
@@ -410,6 +424,8 @@ Activation::Activation(Layer *prev, cudnnActivationMode_t activationMode,
 {
     cudnnDataType_t dtype;
     int n, c, h, w, nStride, cStride, hStride, wStride;
+    int testvar = 9;
+    //this -> testvar = testvar;
 
     // TODO (set 5): get descriptor of input minibatch, in_shape
     CUDNN_CALL( cudnnGetTensor4dDescriptor(in_shape, &dtype, &n, &c, &h, &w,
@@ -424,12 +440,10 @@ Activation::Activation(Layer *prev, cudnnActivationMode_t activationMode,
 
     // TODO (set 5): create activation descriptor, and set it to have the given
     //               activationMode, propagate NaN's, and have coefficient coef
-    cudnnActivationDescriptor_t activation_desc;
-    cudnnCreateActivationDescriptor(&activation_desc);
-    cudnnSetActivationDescriptor(activation_desc,
+    CUDNN_CALL( cudnnCreateActivationDescriptor(&activation_desc));
+    CUDNN_CALL( cudnnSetActivationDescriptor(activation_desc,
     activationMode,
-    CUDNN_PROPAGATE_NAN, 0.0);
-
+    CUDNN_PROPAGATE_NAN, 0.0));
 
 }
 
@@ -447,8 +461,10 @@ void Activation::forward_pass()
 {
     float one = 1.0, zero = 0.0;
     // TODO (set 5): apply activation, i.e. out_batch = activation(in_batch)
+    std::cout << "activation forward \n";
     cudnnActivationForward(cudnnHandle, activation_desc,
     &one, in_shape, in_batch, &zero, out_shape, out_batch);
+    std::cout << "end activation forward \n";
 }
 
 /**
@@ -703,13 +719,15 @@ SoftmaxCrossEntropy::~SoftmaxCrossEntropy() = default;
 
 void SoftmaxCrossEntropy::forward_pass()
 {
+    std::cout << "softmax forward \n";
     float one = 1.0, zero = 0.0;
-    cudnnSoftmaxForward(cudnnHandle, 
+    CUDNN_CALL( cudnnSoftmaxForward(cudnnHandle, 
     CUDNN_SOFTMAX_ACCURATE,
     CUDNN_SOFTMAX_MODE_CHANNEL,
     &one, in_shape, in_batch,
-    &zero, out_shape, out_batch);
-    )
+    &zero, out_shape, out_batch)
+    );
+    std::cout << "end softmax forward \n";
 
     // TODO (set 5): do softmax forward pass using accurate softmax and
     //               per instance mode. store result in out_batch.
@@ -734,13 +752,13 @@ void SoftmaxCrossEntropy::backward_pass(float lr)
     float minus_one = -1.0;
 
     // TODO (set 5): first, copy grad_in_batch = out_batch
-    cudaMemcpy(grad_in_batch, out_batch, size * sizeof(float), cudaMemcpyDeviceToDevice);
+    gpuErrchk( cudaMemcpy(grad_in_batch, out_batch, size * sizeof(float), cudaMemcpyDeviceToDevice) );
 
     // TODO (set 5): set grad_in_batch = grad_in_batch - grad_out_batch using
     //               cublasSaxpy
     // grad_in_batch = out_batch
     // grad_out_batch = y
-    cublasSaxpy(cublasHandle, n, &minus_one, grad_out_batch, 1, grad_in_batch, 1);
+    CUBLAS_CALL( cublasSaxpy(cublasHandle, n, &minus_one, grad_out_batch, 1, grad_in_batch, 1) );
 
     // normalize the gradient by the batch size (do it once in the beginning, so
     // we don't have to worry about it again later)
