@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
     // Initialize a model to classify the MNIST dataset
     Model *model = new Model(200, c, h, w);
-#if 0
+#if 1
     model->add("conv", { 20, 5, 1 });
     model->add("max pool", { 2 });
     model->add(activation);
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
     // Train the model on the training set for 25 epochs
     std::cout << "Predicting on " << n_classes << " classes." << std::endl;
-    model->train(train_X, train_Y, 0.03f, n_train, 25);
+    model->train(train_X, train_Y, 0.03f, n_train, 100);
 
     // Load test set
     int n_test;
