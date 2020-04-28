@@ -724,7 +724,7 @@ void SoftmaxCrossEntropy::forward_pass()
     float one = 1.0, zero = 0.0;
     CUDNN_CALL( cudnnSoftmaxForward(cudnnHandle, 
     CUDNN_SOFTMAX_ACCURATE,
-    CUDNN_SOFTMAX_MODE_CHANNEL,
+    CUDNN_SOFTMAX_MODE_INSTANCE,
     &one, in_shape, in_batch,
     &zero, out_shape, out_batch)
     );
@@ -759,7 +759,7 @@ void SoftmaxCrossEntropy::backward_pass(float lr)
     //               cublasSaxpy
     // grad_in_batch = out_batch
     // grad_out_batch = y
-    CUBLAS_CALL( cublasSaxpy(cublasHandle, n, &minus_one, grad_out_batch, 1, grad_in_batch, 1) );
+    CUBLAS_CALL( cublasSaxpy(cublasHandle, n * c * h * w, &minus_one, grad_out_batch, 1, grad_in_batch, 1) );
 
     // normalize the gradient by the batch size (do it once in the beginning, so
     // we don't have to worry about it again later)
