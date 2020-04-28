@@ -257,8 +257,8 @@ Input::Input(int n, int c, int h, int w,
 Input::~Input() = default;
 
 /** Input layer does no processing on its input. */
-void Input::forward_pass() {std::cout << "input forward \n";}
-//void Input::forward_pass() {}
+//void Input::forward_pass() {std::cout << "input forward \n";}
+void Input::forward_pass() {}
 
 /** Nothing is behind the input layer. */
 void Input::backward_pass(float learning_rate) {}
@@ -323,7 +323,7 @@ Dense::~Dense()
 void Dense::forward_pass()
 {
     float one = 1.0, zero = 0.0;
-    std::cout << "dense forward \n";
+    //std::cout << "dense forward \n";
 
     // TODO (set 5): out_batch = weights^T * in_batch (without biases)
         CUBLAS_CALL( cublasSgemm(cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
@@ -344,7 +344,8 @@ void Dense::forward_pass()
         onevec, batch_size,
         &one,
         out_batch, out_size) );
-        std::cout << "end dense forward \n";
+        //std::cout << "end dense forward \n";
+        // TODO: cublas puts  matrices in column major order, make sure dimensions arent backward
 }
 
 /**
@@ -355,7 +356,7 @@ void Dense::forward_pass()
  */
 void Dense::backward_pass(float learning_rate)
 {
-    std::cout << "dense backward \n";
+    //std::cout << "dense backward \n";
     float one = 1.0, zero = 0.0;
 
     // TODO (set 5): grad_weights = in_batch * (grad_out_batch)^T
@@ -381,10 +382,10 @@ void Dense::backward_pass(float learning_rate)
         grad_biases, 1) );
 
     CUBLAS_CALL( cublasSgemm(
-        cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
         in_size, batch_size, out_size,
         &one,
-        weights, out_size,
+        weights, in_size,
         grad_out_batch, out_size,
         &zero,
         grad_in_batch,
@@ -405,7 +406,7 @@ void Dense::backward_pass(float learning_rate)
 
     CUBLAS_CALL( cublasSaxpy(cublasHandle, out_size, &eta,
     grad_biases, 1, biases, 1));
-    std::cout << "dense backward end \n";
+    //std::cout << "dense backward end \n";
 
     // TODO (set 5): biases = biases + eta * grad_biases
 }
@@ -461,10 +462,10 @@ void Activation::forward_pass()
 {
     float one = 1.0, zero = 0.0;
     // TODO (set 5): apply activation, i.e. out_batch = activation(in_batch)
-    std::cout << "activation forward \n";
-    cudnnActivationForward(cudnnHandle, activation_desc,
-    &one, in_shape, in_batch, &zero, out_shape, out_batch);
-    std::cout << "end activation forward \n";
+    //std::cout << "activation forward \n";
+    CUDNN_CALL( cudnnActivationForward(cudnnHandle, activation_desc,
+    &one, in_shape, in_batch, &zero, out_shape, out_batch));
+    //std::cout << "end activation forward \n";
 }
 
 /**
@@ -476,11 +477,11 @@ void Activation::forward_pass()
 void Activation::backward_pass(float learning_rate)
 {
     float one = 1.0, zero = 0.0;
-    cudnnActivationBackward(cudnnHandle, activation_desc,
+    CUDNN_CALL( cudnnActivationBackward(cudnnHandle, activation_desc,
     &one, out_shape, out_batch,
     out_shape, grad_out_batch,
-    in_shape, in_shape, &zero,
-    in_shape, grad_in_batch);
+    in_shape, in_batch, &zero,
+    in_shape, grad_in_batch));
 
     // TODO (set 5): do activation backwards, i.e. compute grad_in_batch
 }
@@ -719,7 +720,7 @@ SoftmaxCrossEntropy::~SoftmaxCrossEntropy() = default;
 
 void SoftmaxCrossEntropy::forward_pass()
 {
-    std::cout << "softmax forward \n";
+    //std::cout << "softmax forward \n";
     float one = 1.0, zero = 0.0;
     CUDNN_CALL( cudnnSoftmaxForward(cudnnHandle, 
     CUDNN_SOFTMAX_ACCURATE,
@@ -727,7 +728,7 @@ void SoftmaxCrossEntropy::forward_pass()
     &one, in_shape, in_batch,
     &zero, out_shape, out_batch)
     );
-    std::cout << "end softmax forward \n";
+    //std::cout << "end softmax forward \n";
 
     // TODO (set 5): do softmax forward pass using accurate softmax and
     //               per instance mode. store result in out_batch.

@@ -51,7 +51,10 @@ float CrossEntropyLoss(float* pred_Y, float* true_Y, int n, int c, int h, int w)
 
     // Accumulate the total loss on the device by invoking a kernel
     int n_blocks = std::min(65535, (n * c * h * w + BW  - 1) / BW);
+    
     // TODO (set 5): call CrossEntropyKernel
+    CrossEntropyKernel<<<n_blocks, BW, BW * sizeof(float)>>>(pred_Y, true_Y,
+        d_loss, n, c, h, w);
 
     // Copy back the accumulated loss on the device back to the host
     CUDA_CALL( cudaMemcpy(&loss, d_loss, sizeof(float), cudaMemcpyDeviceToHost) );
@@ -87,13 +90,6 @@ float SoftThresholdAccuracy(float* pred_Y, float* true_Y,
     int n_blocks = std::min(65535, (n * c * h * w + BW - 1) / BW);
     SoftThresholdAccKernel<<<n_blocks, BW, BW * sizeof(float)>>>(pred_Y, true_Y,
         d_acc, n, c, h, w);
-    
-    cudaError_t err = cudaGetLastError();
-    if  (cudaSuccess != err){
-            cerr << "Error " << cudaGetErrorString(err) << endl;
-    } else {
-            cerr << "No kernel error detected" << endl;
-    }
 
     // Copy back the accumulated accuracy on the device back to the host
     CUDA_CALL(cudaMemcpy(&acc, d_acc, sizeof(float), cudaMemcpyDeviceToHost));
@@ -113,11 +109,29 @@ __global__ void CrossEntropyKernel(float* pred_Y, float* true_Y, float *loss,
     int n, int c, int h, int w)
 {
     extern __shared__ float shmem[];
+    unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned tid = threadIdx.x;
+    float eps = 0.01;
 
+    shmem[tid] = 0.0;
+
+    if (idx < n * c * h * w)
+    {
+        //shmem[tid] = -1 * log(fminf(pred_Y[idx],eps)) * true_Y[idx];
+        shmem[tid] = -1 * log(pred_Y[idx],eps) * true_Y[idx];
+    }
+
+    __syncthreads();
+
+    for (unsigned s = blockDim.x / 2; s > 0; s >>= 1)
+    {
+        if (tid < s)
+            shmem[tid] += shmem[tid + s];
+        __syncthreads();
+    }
     // TODO (set 5): use a parallel reduction to compute cross-entropy between
     //               pred_Y and true_Y, i.e. -sum( log(pred_Y[i]) * true_Y[i] ),
     //               where i ranges from 0 to (n*c*h*w) - 1
-
     // atomically add the accumulated loss per block into the global accumulator
     if (threadIdx.x == 0)
         atomicAdd(loss, shmem[0] / static_cast<float>(n));

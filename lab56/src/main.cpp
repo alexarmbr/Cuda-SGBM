@@ -13,7 +13,7 @@
 int main(int argc, char **argv)
 {
     // Kind of activation to use (default relu)
-    std::string activation = "relu";
+    std::string activation = "tanh";
 
     // Directory in which training and testing data are stored (default is this)
     std::string dirname = "data";
@@ -67,8 +67,8 @@ int main(int argc, char **argv)
     // Load test set
     int n_test;
     float *test_X, *test_Y;
-    LoadMNISTData(dirname + "/test-images-idx3-ubyte",
-        dirname + "/test-labels-idx1-ubyte",
+    LoadMNISTData(dirname + "/t10k-images-idx3-ubyte",
+        dirname + "/t10k-labels-idx1-ubyte",
         n_test, c, h, w, n_classes, &test_X, &test_Y);
     std::cout << "Loaded test set." << std::endl;
 
