@@ -4,9 +4,8 @@ import numpy as np
 
 from pycuda.compiler import SourceModule
 
-build_options = ['-Dmy_global_var=3']
-
-
+build_options = ['-DD_STEP=2',
+                 '--diag_warning=optimizations']
 mod = SourceModule(open("lib/sgbm_helper.cu").read(), options=build_options)
 
 multiply_them = mod.get_function("multiply_them")

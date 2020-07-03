@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 from time import time
 import os
 import pdb
+import pycuda.autoinit
+import pycuda.driver as drv
+import numpy as np
 
 IMAGE_DIR = "Adirondack-perfect"
 
@@ -141,7 +144,47 @@ class TestVerticalAggregation(unittest.TestCase):
         plt.imshow(np.argmin(L, axis=2))
         plt.show()
 
+class Test3dMin(unittest.testcase):
+    def test1(self):
+        IMAGE_DIR = "Backpack-perfect"
+        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
 
+        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+        window_size=3, resize=(640,480))
+
+        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+        stereo.set_params(params)
+        stereo.params['ndisp'] = 50
+
+        cim1 = stereo.census_transform(stereo.im1)
+        cim2 = stereo.census_transform(stereo.im2)
+        if not stereo.reversed:
+            D = range(int(stereo.params['ndisp']))
+        else:
+            D = reversed(range(int(-stereo.params['ndisp']), 1))
+        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+
+
+
+        build_options = ['-DD_STEP=2',
+                 '--diag_warning=optimizations']
+        mod = SourceModule(open("lib/sgbm_helper.cu").read(), options=build_options)
+        min_kernel = mod.get_function("min_3d_mat")
+        rows, cols, d = stereo.im1.shape
+        out = np.zeros((rows, cols))
+
+        min_3d_mat(drv.Out(out), drv.In(stereo.im1),
+        1, rows, cols, d)
+
+
+
+
+
+        min_kernel(
+
+        ) 
+        
 
 
 if __name__ == "__main__":
