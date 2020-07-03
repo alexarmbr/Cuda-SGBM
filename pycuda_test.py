@@ -3,7 +3,11 @@ import pycuda.driver as drv
 import numpy as np
 
 from pycuda.compiler import SourceModule
-mod = SourceModule(open("lib/sgbm_helper.cu").read())
+
+build_options = ['-Dmy_global_var 3']
+
+
+mod = SourceModule(open("lib/sgbm_helper.cu").read(), build_options)
 
 multiply_them = mod.get_function("multiply_them")
 three_d_matrix_test = mod.get_function("three_d_matrix_test")

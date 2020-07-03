@@ -1,4 +1,4 @@
-#define MYVAR 2 
+#define DEPTH 2 
 
 
 __global__ void multiply_them(float *dest, float *a, float *b)
@@ -41,15 +41,6 @@ __global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_ro
 //     }
 //   }
 
-
-
-
-
-
-
-
-
-
-}
+// }
 
 
