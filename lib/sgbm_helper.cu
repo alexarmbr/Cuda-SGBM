@@ -1,4 +1,4 @@
-#define DEPTH 2 
+//#define DEPTH 2 
 
 
 __global__ void multiply_them(float *dest, float *a, float *b)
@@ -9,10 +9,10 @@ __global__ void multiply_them(float *dest, float *a, float *b)
 
 __global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_row, int N)
 {
-  if(threadIdx.x < N){
+  if(threadIdx.x < my_global_var){
   //if((threadIdx.x == threadIdx.y) & (threadIdx.x == threadIdx.z)){
     //int idx = (threadIdx.z * stride_depth * stride_row) + (threadIdx.y * stride_row) + threadIdx.x;
-    int idx = (threadIdx.z * N * N) + (threadIdx.y * N) + threadIdx.x;
+    int idx = (threadIdx.z * my_global_var * my_global_var) + (threadIdx.y * my_global_var) + threadIdx.x;
     dest[idx] = 100.0f;
   //}
 }
