@@ -21,10 +21,4 @@ three_d_matrix_test(
         np.int32(N),
         block = (N,N,N), grid=(1,1))
 
-
-
-#multiply_them(
-#        drv.Out(dest), drv.In(a), drv.In(b),
-#        block=(400,1,1), grid=(1,1))
-
 print(mat)
