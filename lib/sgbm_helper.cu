@@ -7,10 +7,11 @@ __global__ void multiply_them(float *dest, float *a, float *b)
 __global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_row, int N)
 {
   if(threadIdx.x < N){
-  if((threadIdx.x == threadIdx.y) & (threadIdx.x == threadIdx.z)){
-    idx = threadIdx.z * stride_depth * stride_row + threadIdx.y * stride_row + threadIdx.x
-    dest[idx] = 100.0f
-  }
+  //if((threadIdx.x == threadIdx.y) & (threadIdx.x == threadIdx.z)){
+    //int idx = (threadIdx.z * stride_depth * stride_row) + (threadIdx.y * stride_row) + threadIdx.x;
+    int idx = (threadIdx.z * N * N) + (threadIdx.y * N) + threadIdx.x;
+    dest[idx] = 100.0f;
+  //}
 }
 }
 
