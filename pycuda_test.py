@@ -3,22 +3,26 @@ import pycuda.driver as drv
 import numpy
 
 from pycuda.compiler import SourceModule
-mod = SourceModule("""
-__global__ void multiply_them(float *dest, float *a, float *b)
-{
-  const int i = threadIdx.x;
-  dest[i] = a[i] * b[i];
-}
-""")
+mod = SourceModule(open("lib/sgbm_helper.cu").read())
 
 multiply_them = mod.get_function("multiply_them")
 
-a = numpy.random.randn(400).astype(numpy.float32)
-b = numpy.random.randn(400).astype(numpy.float32)
+#a = numpy.random.randn(400).astype(numpy.float32)
+#b = numpy.random.randn(400).astype(numpy.float32)
+N = 3
+mat = np.array(range(N**3), dtype = np.float32).reshape((N,) * 3)
+d_stride, r_stride, c_stride = mat.strides
 
-dest = numpy.zeros_like(a)
-multiply_them(
-        drv.Out(dest), drv.In(a), drv.In(b),
-        block=(400,1,1), grid=(1,1))
+three_d_matrix_test(
+        drv.Out(mat),
+        drv.In(d_stride),
+        drv.In(r_stride),
+        drv.In(c_stride), N)
 
-print(dest-a*b)
+
+
+#multiply_them(
+#        drv.Out(dest), drv.In(a), drv.In(b),
+#        block=(400,1,1), grid=(1,1))
+
+print(dest)

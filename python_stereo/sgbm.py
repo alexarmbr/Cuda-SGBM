@@ -61,33 +61,19 @@ class SemiGlobalMatching(_BasicStereo):
         #stereo = (stereo1 + stereo2) / 2
         return stereo1
 
-
     
-    def _compute_stereogram(self, im1, im2):
+    def compute_disparity_img(self, cim1, cim2, disparity_range):
         """
-        compute disparity image that warps im2 -> im1
+        compute pixelwise hamming distance between 2 census images
 
         Arguments:
-            im1 {np.ndarray} -- image 1
-            im2 {np.ndarray} -- image 2
+            cim1 {np.ndarray} -- census image 1
+            cim2 {np.ndarray} -- census image 2
+            disparity_range {generator} -- range of ints to compute disparity over
         """
-        assert self.p1 is not None, "parameters have not been set"
-        t1 = t.time()
-        cim1 = self.census_transform(im1)
-        cim2 = self.census_transform(im2)
-        pdb.set_trace()
-        print(f"census transform time {t.time() - t1}")
-        
-
         cost_images = []
-        if not self.reversed:
-            D = range(int(self.params['ndisp']))
-        else:
-            D = reversed(range(int(-self.params['ndisp']), 1))
-        
-        
         t1 = t.time()
-        for d in D:
+        for d in disparity_range:
             if d != 0:
                 if d < 0:
                     shifted_im2 = cim2[:, :d].copy() # cut off right
@@ -110,6 +96,32 @@ class SemiGlobalMatching(_BasicStereo):
         cost_images = np.stack(cost_images)
         cost_images = cost_images.transpose(1,2,0)
         print(f"shift and stack time: {t.time() - t1}")
+        return cost_images
+
+    
+
+
+    
+    def _compute_stereogram(self, im1, im2):
+        """
+        compute disparity image that warps im2 -> im1
+
+        Arguments:
+            im1 {np.ndarray} -- image 1
+            im2 {np.ndarray} -- image 2
+        """
+        assert self.p1 is not None, "parameters have not been set"
+        t1 = t.time()
+        cim1 = self.census_transform(im1)
+        cim2 = self.census_transform(im2)
+        print(f"census transform time {t.time() - t1}")
+        
+        if not self.reversed:
+            D = range(int(self.params['ndisp']))
+        else:
+            D = reversed(range(int(-self.params['ndisp']), 1))
+        cost_images = self.compute_disparity_img(cim1, cim2, D)
+        
         t1 = t.time()
         cost_images = self.aggregate_cost(cost_images)
         print(f"aggregate cost time: {t.time() - t1}")
