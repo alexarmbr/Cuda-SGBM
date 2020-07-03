@@ -1,22 +1,21 @@
-//#define DEPTH 2 
-#include <limits>
+//#define DEPTH 2
 
-__global__ void multiply_them(float *dest, float *a, float *b)
-{
-  const int i = threadIdx.x;
-  dest[i] = a[i] * b[i];
-}
+// __global__ void multiply_them(float *dest, float *a, float *b)
+// {
+//   const int i = threadIdx.x;
+//   dest[i] = a[i] * b[i];
+// }
 
-__global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_row, int N)
-{
-  if(threadIdx.x < my_global_var){
-  //if((threadIdx.x == threadIdx.y) & (threadIdx.x == threadIdx.z)){
-    //int idx = (threadIdx.z * stride_depth * stride_row) + (threadIdx.y * stride_row) + threadIdx.x;
-    int idx = (threadIdx.z * my_global_var * my_global_var) + (threadIdx.y * my_global_var) + threadIdx.x;
-    dest[idx] = 100.0f;
-  //}
-}
-}
+// __global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_row, int N)
+// {
+//   if(threadIdx.x < my_global_var){
+//   //if((threadIdx.x == threadIdx.y) & (threadIdx.x == threadIdx.z)){
+//     //int idx = (threadIdx.z * stride_depth * stride_row) + (threadIdx.y * stride_row) + threadIdx.x;
+//     int idx = (threadIdx.z * my_global_var * my_global_var) + (threadIdx.y * my_global_var) + threadIdx.x;
+//     dest[idx] = 100.0f;
+
+// }
+// }
 
 // dp - cost aggregation array
 // cost_image - m x n x D array
@@ -26,44 +25,65 @@ __global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_ro
 // D - depth
 // depth_stride - pitch along depth dimension
 // row_stride - pitch along row dimension
+__device__ float arr_min(float * arr, int dsize)
+{
+  float a = 10000000;
+
+  for(int i = 0; i < dsize; i++)
+    a = fminf(arr[i], a);
+  return a;
+}
 
 // takes min along depth dimension, puts output in dp
 __global__ void min_3d_mat(float *dp, float *cost_image, 
-int d,
-int m, int n, int D)
+int m, int n)
 {
-  col = blockDim.x * blockIdx.x + threadIdx.x
+  int col = blockDim.x * blockIdx.x + threadIdx.x;
   
-  K = ceil(n / (blockDim.x * gridDim.x));
-  D_SIZE = floor(D / D_STEP); 
-  float arr[D_SIZE];
+  int K = ceilf(n / (blockDim.x * gridDim.x));
+  int D_SIZE = floorf(D / D_STEP); 
+  float arr[ARR_SIZE];
 
-  while(col < m)
+  while(col < n)
   {
-    for (int row = 1; row < n; row++)
+    for (int row = 0; row < m; row++)
     {
-      arr_ind = 0
+      int arr_ind = 0;
       
-      #pragma unroll
+      //#pragma unroll
       for (int depth = 0; depth < D; depth+=D_STEP){
         arr[arr_ind] = cost_image[depth * m * n + row * n + col];
         arr_ind++;
       }
-      dp[depth * m * n + row * n + col] == arr_min(&arr);
+      dp[row * n + col] = arr_min(arr, D_SIZE);
     }
-  col += blockDim.x
+  col += blockDim.x;
   }
 
 }
 
 
+__global__ void slice_arr(float *dp, float *cost_image, 
+  int m, int n, int slice)
+  {
+    int col = blockDim.x * blockIdx.x + threadIdx.x;
+    
+    //int K = ceilf(n / (blockDim.x * gridDim.x));
+    //int D_SIZE = floorf(D / D_STEP); 
+    //float arr[ARR_SIZE];
+  
+    while(col < n)
+    {
+      for (int row = 0; row < m; row++)
+      {
+        dp[row * n + col] = cost_image[slice * m * n + row * n + col];
+      }
+    col += blockDim.x;
+    }
+  
+  }
 
-__device__ float arr_min(float * arr)
-{
-  float a = std::numeric_limits<float>::infinity():
 
-  for(int i = 0; i < D_SIZE; i++)
-    a = fminf(arr[i], a);
-  return a;
-}
+
+
 

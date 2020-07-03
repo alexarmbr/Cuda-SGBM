@@ -65,7 +65,7 @@ class _BasicStereo:
         pad im to left or right with array of shape (im.shape[0], padding) of inf's
         """
         assert direction in {'left', 'right'}, "must pad to the left or right of image"
-        pad = np.array([float('inf')] * (img.shape[0]*padding)).reshape(img.shape[0], padding)
+        pad = np.array([1e7] * (img.shape[0]*padding)).reshape(img.shape[0], padding)
         if direction == "left":
             img = np.hstack((pad,img))
         elif direction == "right":
