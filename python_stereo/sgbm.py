@@ -4,6 +4,14 @@ import cv2
 import numpy as np
 import time as t
 
+def format_compiler_constants(d):
+    """
+    d - dictionary of key value pairs containing variable name a and val
+    """
+    return "-D"+ ", ".join([f'{k}={v}' for k,v in d.items()])
+
+
+
 class SemiGlobalMatching(_BasicStereo):
 
     def __init__(self, *args, **kwargs):
@@ -287,5 +295,5 @@ class SemiGlobalMatching(_BasicStereo):
             d3 = np.array([float("inf")] * disparity_costs.shape[0])
         d4 = prev_min + self.p2
         costs = np.vstack((d1, d2, d3, d4)).T
-        return np.min(costs, axis=1) + prev_min
+        return np.min(costs, axis=1) - prev_min
         

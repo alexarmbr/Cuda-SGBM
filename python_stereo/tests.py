@@ -1,5 +1,5 @@
 import unittest
-from sgbm import SemiGlobalMatching
+from sgbm import SemiGlobalMatching, format_compiler_constants
 import ctypes
 import numpy.ctypeslib as ctl
 from numpy.ctypeslib import ndpointer
@@ -14,6 +14,10 @@ import numpy as np
 from pycuda.compiler import SourceModule
 import math
 IMAGE_DIR = "Adirondack-perfect"
+
+
+
+
 
 class TestCensusTransform(unittest.TestCase):
     """
@@ -126,7 +130,7 @@ class TestVerticalAggregation(unittest.TestCase):
         cost_images = stereo.compute_disparity_img(cim1, cim2, D)
     
         L = np.zeros(cost_images.shape)
-        m, n, D = cost_images.shape
+        m, n, d = cost_images.shape
         # direction == (1,0)
         u,v = (1,0)
         I = np.array([1] * n)
@@ -141,8 +145,28 @@ class TestVerticalAggregation(unittest.TestCase):
             mask = np.logical_and(np.logical_and(0 <= I, I < m), np.logical_and(0 <= J, J < n)) # these are the paths that still have to traverse
             I = I[mask]
             J = J[mask]
-        plt.imshow(np.argmin(L, axis=2))
-        plt.show()
+        
+        cost_images = cost_images.transpose((2,0,1))
+        cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
+        d,rows,cols = cost_images.shape
+        
+        compiler_constants = {
+            'D_STEP':2,
+            'D':d,
+            'ARR_SIZE':math.floor(d/d_step),
+            'P1':5,
+            'P2':90000
+        }
+        build_options = [format_compiler_constants(compiler_constants)]
+        mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
+        
+        
+        vertical_aggregate = mod.get_function("vertical_aggregate")
+        out = np.zeros((d, rows, cols), dtype = np.float32)
+        vertical_aggregate(drv.Out(out), drv.In(cost_images),
+        np.int32(rows), np.int32(cols), block = (256,1,1), grid = (2,1))
+        #pdb.set_trace()
+        self.assertTrue(np.all(np.isclose(out, )))
 
 class Test3dMin(unittest.TestCase):
 
@@ -171,7 +195,7 @@ class Test3dMin(unittest.TestCase):
         #cost_images  = np.array(range(5*4*3), dtype = np.float32).reshape((5,4,3))
         d, rows, cols = cost_images.shape
         d_step = 1
-        build_options = [f'-DD_STEP={d_step}, D={d}, ARR_SIZE={math.floor(d/d_step)}']
+        build_options = []
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
         min_3d_mat = mod.get_function("slice_arr")
         out = np.zeros((rows, cols), dtype=np.float32)
@@ -180,7 +204,6 @@ class Test3dMin(unittest.TestCase):
         np.int32(rows), np.int32(cols), np.int32(arr_slice), block = (256,1,1), grid = (2,1))
         pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, cost_images[arr_slice,:,:])))
-
 
 
 
@@ -207,15 +230,23 @@ class Test3dMin(unittest.TestCase):
         cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
 
         d, rows, cols = cost_images.shape
-        d_step = 1
-        build_options = [f'-DD_STEP={d_step}, D={d}, ARR_SIZE={math.floor(d/d_step)}']
+        d_step = 2
+
+        compiler_constants = {
+            'D_STEP':2,
+            'D':d,
+            'ARR_SIZE':math.floor(d/d_step),
+            'P1':5,
+            'P2':90000
+        }
+        build_options = [format_compiler_constants(compiler_constants)]
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
         min_3d_mat = mod.get_function("min_3d_mat")
         out = np.zeros((rows, cols), dtype = np.float32)
         min_3d_mat(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (2,1))
         pdb.set_trace()
-        self.assertTrue(np.all(np.isclose(out, np.min(cost_images, axis=0))))
+        self.assertTrue(np.all(np.isclose(out, np.min(cost_images[::d_step, :, :], axis=0))))
 
         
 

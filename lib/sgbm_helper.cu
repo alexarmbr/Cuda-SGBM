@@ -84,6 +84,69 @@ __global__ void slice_arr(float *dp, float *cost_image,
   }
 
 
+  
+__global__ void vertical_aggregate(float *dp, float *cost_image, 
+  int m, int n)
+  {
+    // which column of array to work on
+    int col = blockDim.x * blockIdx.x + threadIdx.x;
+    
+    // max number of columns a thread will work on
+    int K = ceilf(n / (blockDim.x * gridDim.x));
+    
+    // how large local array of disparity values will be
+    // how many disparity values will be aggregated over
+    int D_SIZE = floorf(D / D_STEP);
+    float arr[ARR_SIZE];
+    
+    // todo: maybe it will work better to take running average of every d 
+    // slices
+    while(col < n)
+    {
+      for (int row = 1; row < m; row++)
+      {
+        int arr_ind = 0;
+        
+        // calculate min cost disparity for this column from row-1
+        //#pragma unroll
+        for (int depth = 0; depth < D; depth+=D_STEP){
+          arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
+          arr_ind++;
+        }
+        
+        float prev_min = arr_min(arr, D_SIZE);
+        float d0 = 0;
+        float d1 = 0;
+        float d2 = 0;
+        float d3 = prev_min + P2;
+        
+        // todo: try having this loop go from 1 to d-1 and removing the if else
+        for (int d = 0; d < D; d+=D_STEP){
+          // for each d I need dp[{d-1, d, d+1}, row-1, col], 
+          d0 = dp[(d * m * n + (row - 1) * n + col];
+          if (d > 0)
+            d1 = dp[(d-1) * m * n + (row - 1) * n + col] + P1;
+          else
+            d1 = 10000000;
+          
+          if (d < D-1)
+            d2 = dp[(d+1) * m * n + (row - 1) * n + col] + P1;
+          else
+            d2 = 10000000;
+            dp[d * m * n + row * n + col] = fminf(fminf(d0,d1), fminf(d2,d3)) - prev_min;
+        }
+      }
+    col += blockDim.x;
+    }
+  }
+
+
+
+
+
+
+
+
 
 
 
