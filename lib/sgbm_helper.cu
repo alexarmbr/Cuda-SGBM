@@ -113,27 +113,27 @@ __global__ void vertical_aggregate(float *dp, float *cost_image,
           arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
           arr_ind++;
         }
-        
+
         float prev_min = arr_min(arr, D_SIZE);
         float d0 = 0;
         float d1 = 0;
         float d2 = 0;
-        float d3 = prev_min + P2;
+        float d3 = prev_min + (float) P2;
         
         // todo: try having this loop go from 1 to d-1 and removing the if else
         for (int d = 0; d < D; d+=D_STEP){
           // for each d I need dp[{d-1, d, d+1}, row-1, col], 
-          d0 = dp[(d * m * n + (row - 1) * n + col];
+          d0 = dp[d * m * n + (row - 1) * n + col];
           if (d > 0)
-            d1 = dp[(d-1) * m * n + (row - 1) * n + col] + P1;
+            d1 = dp[(d-1) * m * n + (row - 1) * n + col] + (float) P1;
           else
-            d1 = 10000000;
+            d1 = 100000000;
           
           if (d < D-1)
-            d2 = dp[(d+1) * m * n + (row - 1) * n + col] + P1;
+            d2 = dp[(d+1) * m * n + (row - 1) * n + col] + (float) P1;
           else
-            d2 = 10000000;
-            dp[d * m * n + row * n + col] = fminf(fminf(d0,d1), fminf(d2,d3)) - prev_min;
+            d2 = 100000000;
+          dp[d * m * n + row * n + col] = cost_image[d * m * n + row * n + col] + fminf(fminf(d0,d1), fminf(d2,d3)) - prev_min;
         }
       }
     col += blockDim.x;
