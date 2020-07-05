@@ -177,7 +177,7 @@ class TestVerticalAggregation(unittest.TestCase):
         k3 = [np.sum(np.isclose(out[:,:,i], L[:,:,i])) for i in range(L.shape[2])]
         print(f"L sum: {np.sum(np.float64(L))}")
         print(f"Out sum: {np.sum(np.float64(out))}")
-        pdb.set_trace()
+        #pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, L)))
 
 class Test3dMin(unittest.TestCase):
