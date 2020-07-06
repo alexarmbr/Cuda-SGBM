@@ -35,7 +35,7 @@ class TestCensusTransform(unittest.TestCase):
 
         t1 = time()
         census1 = stereo.census_transform(stereo.im1.copy()) # python implementation
-        print(f"python census transform time: {time() - t1}")
+        #print(f"python census transform time: {time() - t1}")
 
         
         # 
@@ -54,7 +54,7 @@ class TestCensusTransform(unittest.TestCase):
         stereo.im1.shape[0],
         stereo.im1.shape[1],
         3)
-        print(f"c++ census transform time: {time() - t1}")
+        #print(f"c++ census transform time: {time() - t1}")
 
         self.assertTrue(np.all(np.isclose(census1, census2)))
 
@@ -76,7 +76,7 @@ class TestCensusTransform(unittest.TestCase):
         
         t1 = time()
         census1 = stereo.census_transform(testim.copy()) # python implementation
-        print(f"python census transform time: {time() - t1}")
+        #print(f"python census transform time: {time() - t1}")
 
         
         # 
@@ -95,7 +95,7 @@ class TestCensusTransform(unittest.TestCase):
         testim.shape[0],
         testim.shape[1],
         1)
-        print(f"c++ census transform time: {time() - t1}")
+        #print(f"c++ census transform time: {time() - t1}")
 
         self.assertTrue(np.all(np.isclose(census1, census2)))
         
@@ -117,39 +117,27 @@ class TestVerticalAggregation(unittest.TestCase):
         stereo.params['ndisp'] = 50
         t1 = time()
 
-        # assert stereo.p1 is not None, "parameters have not been set"
-        # t1 = time()
-        # cim1 = stereo.census_transform(stereo.im1)
-        # cim2 = stereo.census_transform(stereo.im2)
-        # print(f"census transform time {time() - t1}")
+        assert stereo.p1 is not None, "parameters have not been set"
+        t1 = time()
+        cim1 = stereo.census_transform(stereo.im1)
+        cim2 = stereo.census_transform(stereo.im2)
+        #print(f"census transform time {time() - t1}")
         
-        # if not stereo.reversed:
-        #     D = range(int(stereo.params['ndisp']))
-        # else:
-        #     D = reversed(range(int(-stereo.params['ndisp']), 1))
-        # cost_images = stereo.compute_disparity_img(cim1, cim2, D)
-        # cost_images = np.float32(cost_images)
-        # cost_images = cost_images[:,:,8:45]
+        if not stereo.reversed:
+            D = range(int(stereo.params['ndisp']))
+        else:
+            D = reversed(range(int(-stereo.params['ndisp']), 1))
+        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+        cost_images = np.float32(cost_images)
+        ##cost_images = cost_images[:,:,8:45]
         #cost_images = cost_images[:,:,9:50]
-        shape = (480,640,36)
-        cost_images = np.float32(np.random.normal(loc=100, size=shape))
-    
-        L = np.zeros(cost_images.shape, dtype = np.float32)
+        #shape = (480,640,36)
+        #cost_images = np.float32(np.random.normal(loc=100, size=shape))
         m, n, D = cost_images.shape
         # direction == (1,0)
-        u,v = (1,0)
-        I = np.array([1] * n)
-        J = np.array(range(n))
-
-        while len(I) > 0:
-            min_val = np.min(cost_images[I-u, J-v, :], axis = 1)
-            for d in range(D):
-                L[I,J,d] += cost_images[I, J, d] + stereo.dp_criteria(L[I-u, J-v, :], d, min_val)
-            I+=u
-            J+=v
-            mask = np.logical_and(np.logical_and(0 <= I, I < m), np.logical_and(0 <= J, J < n)) # these are the paths that still have to traverse
-            I = I[mask]
-            J = J[mask]
+        stereo.directions = [(1,0)]
+        L = stereo.aggregate_cost(cost_images)
+        L = L.transpose((2,0,1))
         
         cost_images = cost_images.transpose((2,0,1))
         cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
@@ -168,16 +156,19 @@ class TestVerticalAggregation(unittest.TestCase):
         
         
         vertical_aggregate = mod.get_function("vertical_aggregate")
-        out = np.zeros((d, rows, cols), dtype = np.float32)
-        vertical_aggregate(drv.InOut(out), drv.In(cost_images),
+        out = np.zeros_like(L)
+        out = np.ascontiguousarray(out, dtype = np.float32)
+        vertical_aggregate(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
-        L = L.transpose((2,0,1))
-        k1 = [np.sum(np.isclose(out[i,:,:], L[i,:,:])) for i in range(L.shape[0])]
-        k2 = [np.sum(np.isclose(out[:,i,:], L[:,i,:])) for i in range(L.shape[1])]
-        k3 = [np.sum(np.isclose(out[:,:,i], L[:,:,i])) for i in range(L.shape[2])]
-        print(f"L sum: {np.sum(np.float64(L))}")
-        print(f"Out sum: {np.sum(np.float64(out))}")
+        s1 = np.sum(np.float64(L))
+        s2 = np.sum(np.float64(out))
+
+
+
+        print("L sum: %f" % s1)
+        print("out sum: %f" % s2)
         #pdb.set_trace()
+        print(results)
         self.assertTrue(np.all(np.isclose(out, L)))
 
 class Test3dMin(unittest.TestCase):

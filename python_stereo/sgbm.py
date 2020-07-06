@@ -8,7 +8,8 @@ def format_compiler_constants(d):
     """
     d - dictionary of key value pairs containing variable name a and val
     """
-    return "-D"+ ", ".join([f'{k}={v}' for k,v in d.items()])
+    #return "-D"+ ", ".join([f'{k}={v}' for k,v in d.items()])
+    return "-D"+ ", ".join(['%s=%d' % (k,v) for k,v in d.items()])
 
 
 
@@ -103,7 +104,7 @@ class SemiGlobalMatching(_BasicStereo):
             cost_images.append(cost_im)
         cost_images = np.stack(cost_images)
         cost_images = cost_images.transpose(1,2,0)
-        print(f"shift and stack time: {t.time() - t1}")
+        #print(f"shift and stack time: {t.time() - t1}")
         return cost_images
 
     
@@ -122,7 +123,7 @@ class SemiGlobalMatching(_BasicStereo):
         t1 = t.time()
         cim1 = self.census_transform(im1)
         cim2 = self.census_transform(im2)
-        print(f"census transform time {t.time() - t1}")
+        #print(f"census transform time {t.time() - t1}")
         
         if not self.reversed:
             D = range(int(self.params['ndisp']))
@@ -132,10 +133,10 @@ class SemiGlobalMatching(_BasicStereo):
         
         t1 = t.time()
         cost_images = self.aggregate_cost(cost_images)
-        print(f"aggregate cost time: {t.time() - t1}")
+        #print(f"aggregate cost time: {t.time() - t1}")
         t1 = t.time()
         min_cost_im = np.argmin(cost_images, axis=2)
-        print(f"argmin time: {t.time() - t1}")
+        #print(f"argmin time: {t.time() - t1}")
         min_cost_im += 1
         min_cost_im = cv2.medianBlur(np.float32(min_cost_im), 3)
         min_cost_im = np.int32(min_cost_im)
@@ -221,6 +222,7 @@ class SemiGlobalMatching(_BasicStereo):
             I,J = self.get_starting_indices((u,v), (m,n))
             while len(I) > 0:
                 min_val = np.min(cost_array[I-u, J-v, :], axis = 1)
+                #pdb.set_trace()
                 for d in range(D):
                     L[I,J,d] += cost_array[I, J, d] + self.dp_criteria(L[I-u, J-v, :], d, min_val)
                 I+=u
@@ -283,6 +285,8 @@ class SemiGlobalMatching(_BasicStereo):
             d {int} -- current disparity to compute
             prev_min {float} -- minimum cost of disparity from adjacent cell to scale current cell by
         """
+        #pdb.set_trace()
+        disparity_costs = np.float32(disparity_costs)
         d1 = disparity_costs[:, d]
         if d-1 >= 0:
             d2 = disparity_costs[:, d-1] + self.p1
