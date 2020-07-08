@@ -99,7 +99,7 @@ __global__ void vertical_aggregate(float *dp, float *cost_image,
     // how large local array of disparity values will be
     // how many disparity values will be aggregated over
     int D_SIZE = floorf(D / D_STEP);
-    float arr[ARR_SIZE];
+    //float arr[ARR_SIZE];
     
     // todo: maybe it will work better to take running average of every d 
     // slices
@@ -107,16 +107,18 @@ __global__ void vertical_aggregate(float *dp, float *cost_image,
     {
       for (int row = 1; row < m; row++)
       {
-        int arr_ind = 0;
+        //int arr_ind = 0;
+        float prev_min = 100000000.0;
         
         // calculate min cost disparity for this column from row-1
         //#pragma unroll
         for (int depth = 0; depth < D; depth+=D_STEP){
-          arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
-          arr_ind++;
+          prev_min = fminf(cost_image[depth * m * n + (row - 1) * n + col], prev_min);
+          //arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
+          //arr_ind++;
         }
 
-        float prev_min = arr_min(arr, D_SIZE);
+        //  float prev_min = arr_min(arr, D_SIZE);
         float d0 = 0;
         float d1 = 0;
         float d2 = 0;
