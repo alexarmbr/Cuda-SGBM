@@ -160,6 +160,7 @@ class TestVerticalAggregation(unittest.TestCase):
         out = np.ascontiguousarray(out, dtype = np.float32)
         vertical_aggregate(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
+        drv.stop_profiler()
         s1 = np.sum(np.float64(L))
         s2 = np.sum(np.float64(out))
 
@@ -168,7 +169,6 @@ class TestVerticalAggregation(unittest.TestCase):
         print("L sum: %f" % s1)
         print("out sum: %f" % s2)
         #pdb.set_trace()
-        print(results)
         self.assertTrue(np.all(np.isclose(out, L)))
 
 class Test3dMin(unittest.TestCase):
@@ -205,7 +205,6 @@ class Test3dMin(unittest.TestCase):
         arr_slice = 44
         min_3d_mat(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), np.int32(arr_slice), block = (256,1,1), grid = (2,1))
-        pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, cost_images[arr_slice,:,:])))
 
 
@@ -248,7 +247,6 @@ class Test3dMin(unittest.TestCase):
         out = np.zeros((rows, cols), dtype = np.float32)
         min_3d_mat(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (2,1))
-        pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, np.min(cost_images[::d_step, :, :], axis=0))))
 
         

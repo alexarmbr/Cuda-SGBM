@@ -216,13 +216,12 @@ class SemiGlobalMatching(_BasicStereo):
         Arguments:
             cost_array {np.ndarray} -- array of shape (h,w,d) that contains pixel wise costs (hamming distances) for each d
         """
-        L = np.zeros(cost_array.shape)
+        L = np.zeros(cost_array.shape, dtype=np.float32)
         m, n, D = cost_array.shape
         for (u,v) in self.directions:
             I,J = self.get_starting_indices((u,v), (m,n))
             while len(I) > 0:
                 min_val = np.min(cost_array[I-u, J-v, :], axis = 1)
-                #pdb.set_trace()
                 for d in range(D):
                     L[I,J,d] += cost_array[I, J, d] + self.dp_criteria(L[I-u, J-v, :], d, min_val)
                 I+=u
@@ -285,8 +284,7 @@ class SemiGlobalMatching(_BasicStereo):
             d {int} -- current disparity to compute
             prev_min {float} -- minimum cost of disparity from adjacent cell to scale current cell by
         """
-        #pdb.set_trace()
-        disparity_costs = np.float32(disparity_costs)
+
         d1 = disparity_costs[:, d]
         if d-1 >= 0:
             d2 = disparity_costs[:, d-1] + self.p1
