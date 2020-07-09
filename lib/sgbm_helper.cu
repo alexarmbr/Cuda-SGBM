@@ -69,10 +69,6 @@ __global__ void slice_arr(float *dp, float *cost_image,
   int m, int n, int slice)
   {
     int col = blockDim.x * blockIdx.x + threadIdx.x;
-    
-    //int K = ceilf(n / (blockDim.x * gridDim.x));
-    //int D_SIZE = floorf(D / D_STEP); 
-    //float arr[ARR_SIZE];
   
     while(col < n)
     {
@@ -86,20 +82,23 @@ __global__ void slice_arr(float *dp, float *cost_image,
   }
 
 
+__global__ void horizontal_aggregate(float *dp, float *cost_image, int m, int n)
+{
+
+
+}
+
+
+
+
+
+
   
 __global__ void vertical_aggregate(float *dp, float *cost_image, 
   int m, int n)
   {
     // which column of array to work on
     int col = blockDim.x * blockIdx.x + threadIdx.x;
-    
-    // max number of columns a thread will work on
-    int K = ceilf(n / (blockDim.x * gridDim.x));
-    
-    // how large local array of disparity values will be
-    // how many disparity values will be aggregated over
-    int D_SIZE = floorf(D / D_STEP);
-    //float arr[ARR_SIZE];
     
     // todo: maybe it will work better to take running average of every d 
     // slices
