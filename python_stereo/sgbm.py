@@ -138,7 +138,7 @@ class SemiGlobalMatching(_BasicStereo):
         min_cost_im = np.argmin(cost_images, axis=2)
         #print(f"argmin time: {t.time() - t1}")
         min_cost_im += 1
-        min_cost_im = cv2.medianBlur(np.float32(min_cost_im), 3)
+        #min_cost_im = cv2.medianBlur(np.float32(min_cost_im), 3)
         min_cost_im = np.int32(min_cost_im)
         return self.compute_depth(min_cost_im)
 
@@ -207,7 +207,33 @@ class SemiGlobalMatching(_BasicStereo):
             xor = xor >> 1
         return z
 
+    def aggregate_cost_optimization_test(self, cost_array):
+        """
+        aggregate cost over 8 paths using dp algorithm
+        try precomputing all the mins over d in advance
+        this lends itself to much more efficient cuda implementation
+        and does not hurt quality of image very much (barely affects it)
 
+        Arguments:
+            cost_array {np.ndarray} -- array of shape (h,w,d) that contains pixel wise costs (hamming distances) for each d
+        """
+        L = np.zeros(cost_array.shape, dtype=np.float32)
+        m, n, D = cost_array.shape
+        for (u,v) in self.directions:
+            I,J = self.get_starting_indices((u,v), (m,n))
+            count = 0
+            cum_min = np.min(L, axis = 2)
+            while len(I) > 0:
+                min_val = cum_min[I-u, J-v]
+                for d in range(D):
+                    L[I,J,d] += cost_array[I, J, d] + self.dp_criteria(L[I-u, J-v, :], d, min_val)
+                I+=u
+                J+=v
+                mask = np.logical_and(np.logical_and(0 <= I, I < m), np.logical_and(0 <= J, J < n)) # these are the paths that still have to traverse
+                I = I[mask]
+                J = J[mask]
+                count += 1
+        return L
 
     def aggregate_cost(self, cost_array):
         """
@@ -221,7 +247,7 @@ class SemiGlobalMatching(_BasicStereo):
         for (u,v) in self.directions:
             I,J = self.get_starting_indices((u,v), (m,n))
             while len(I) > 0:
-                min_val = np.min(cost_array[I-u, J-v, :], axis = 1)
+                min_val = np.min(L[I-u, J-v, :], axis = 1)
                 for d in range(D):
                     L[I,J,d] += cost_array[I, J, d] + self.dp_criteria(L[I-u, J-v, :], d, min_val)
                 I+=u

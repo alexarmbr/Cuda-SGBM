@@ -126,6 +126,51 @@ __global__ void r_aggregate_naive(float *dp, float *cost_image, int m, int n)
   }
 }
 
+__global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
+{
+  int row = threadIdx.y + blockIdx.y * blockDim.y;
+  int col = threadIdx.x;
+
+  while (col < n)
+  {
+    __shared__ float MinArray[blockDim.y][blockDim.x];
+    depth_dim_size = m*n;
+    int ind = row * n + col;
+    prev_min = 100000000.0;
+  
+    for (int depth = 0; depth < D; depth+=D_STEP){
+      prev_min = fminf(dp[ind], prev_min);
+      ind += (depth_dim_size * D_STEP);
+    }
+  
+    MinArray[row][col] = prev_min;
+    __syncthreads();
+  
+  
+    float d0 = 0;
+    float d1 = 0;
+    float d2 = 0;
+    //float d3 = prev_min + (float) P2;
+    ind = row * n + col;
+  
+    if (col > 0)
+      float d3 = MinArray[blockDim.y][blockDim.x-1] + (float P2);
+    
+  
+    for (int d = 0; d < D; d+=D_STEP){
+      // for each d I need dp[{d-1, d, d+1}, row-1, col],
+      dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+      ind += (depth_dim_size * D_STEP);
+      current_ind += (depth_dim_size * D_STEP);
+    }
+    col+=blockDim.x;
+
+  }
+
+}
+
+
+
 
 
 
