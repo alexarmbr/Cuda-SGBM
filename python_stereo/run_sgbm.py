@@ -9,7 +9,7 @@ import os
 
 
 
-IMAGE_DIR = "Adirondack-perfect"
+IMAGE_DIR = "Backpack-perfect"
 
 if __name__ == "__main__":
     im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))

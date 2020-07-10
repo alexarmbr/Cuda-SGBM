@@ -28,12 +28,6 @@
 // depth_stride - pitch along depth dimension
 // row_stride - pitch along row dimension
 
-__device__ float dumb_func(int * a)
-{
-  float k = 2.9;
-  return k;
-}
-
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three){
      *d_zero = dp[ind];
@@ -96,22 +90,41 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
 //   }
 
 
-// __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
-// {
-//   int col = blockDim.x * blockIdx.x + threadIdx.x + 1
-//   while(col < n)
-//   {
+__global__ void r_aggregate_naive(float *dp, float *cost_image, int m, int n)
+{
+  int row = blockDim.x * blockIdx.x + threadIdx.x;
+  int depth_dim_size = m*n;
+  while(row < m)
+  {
 
-//     for (int row=0; row < m; row++)
-//     {
+    for (int col=1; col < n; col++)
+    {
+        float prev_min = 100000000.0;
+        int ind = row * n + col - 1;
+        
+        for (int depth = 0; depth < D; depth+=D_STEP){
+          prev_min = fminf(cost_image[ind], prev_min);
+          ind += (depth_dim_size * D_STEP);
+        }
 
-//       float prev_min_l = 100000000.0;
-//       for (int depth = 0; depth < D; depth+=D_STEP)
-//         prev_min = fminf(cost_image[depth * m * n + row * n + (col - 1)], prev_min);
-//     }
-//   }
+        float d0 = 0;
+        float d1 = 0;
+        float d2 = 0;
+        float d3 = prev_min + (float) P2;
+        ind = row * n + col - 1;
+        int current_ind = row * n + col;
 
-// }
+        // todo: try having this loop go from 1 to d-1 and removing the if else
+        for (int d = 0; d < D; d+=D_STEP){
+          // for each d I need dp[{d-1, d, d+1}, row-1, col],
+          dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+          ind += (depth_dim_size * D_STEP);
+          current_ind += (depth_dim_size * D_STEP);
+        }
+    }
+    row += blockDim.x;
+  }
+}
 
 
 
@@ -140,7 +153,7 @@ __global__ void vertical_aggregate(float *dp, float *cost_image,
         //#pragma unroll
         for (int depth = 0; depth < D; depth+=D_STEP){
           prev_min = fminf(cost_image[ind], prev_min);
-          ind += depth_dim_size;
+          ind += (depth_dim_size * D_STEP);
           //arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
           //arr_ind++;
         }
@@ -158,8 +171,8 @@ __global__ void vertical_aggregate(float *dp, float *cost_image,
         for (int d = 0; d < D; d+=D_STEP){
           // for each d I need dp[{d-1, d, d+1}, row-1, col],
           dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
-          ind += depth_dim_size;
-          current_ind += depth_dim_size;
+          ind += (depth_dim_size * D_STEP);
+          current_ind += (depth_dim_size * D_STEP);
         }
       }
     col += blockDim.x;
