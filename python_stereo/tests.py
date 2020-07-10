@@ -13,6 +13,7 @@ import pycuda.driver as drv
 import numpy as np
 from pycuda.compiler import SourceModule
 import math
+from time import time
 IMAGE_DIR = "Adirondack-perfect"
 
 
@@ -136,7 +137,9 @@ class TestVerticalAggregation(unittest.TestCase):
         m, n, D = cost_images.shape
         # direction == (1,0)
         stereo.directions = [(1,0)]
+        t1 = time()
         L = stereo.aggregate_cost(cost_images)
+        print("python aggregate cost %f" % (time() - t1))
         L = L.transpose((2,0,1))
         
         cost_images = cost_images.transpose((2,0,1))
@@ -158,8 +161,10 @@ class TestVerticalAggregation(unittest.TestCase):
         vertical_aggregate = mod.get_function("vertical_aggregate")
         out = np.zeros_like(L)
         out = np.ascontiguousarray(out, dtype = np.float32)
+        t1 = time()
         vertical_aggregate(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
+        print("cuda aggregate cost %f" % (time() - t1))
         drv.stop_profiler()
         s1 = np.sum(np.float64(L))
         s2 = np.sum(np.float64(out))
