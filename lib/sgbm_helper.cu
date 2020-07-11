@@ -1,5 +1,5 @@
 //#define DEPTH 2
-
+#include <stdio.h>
 // __global__ void multiply_them(float *dest, float *a, float *b)
 // {
 //   const int i = threadIdx.x;
@@ -131,7 +131,9 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
   int row = threadIdx.y + blockIdx.y * blockDim.y;
   int col = threadIdx.x;
   int depth_dim_size = m*n;
-  //__shared__ float MinArray[SHMEM_SIZE][SHMEM_SIZE];
+  __shared__ float MinArray[SHMEM_SIZE][SHMEM_SIZE];
+  int K = 0; // this variable keeps track of the progress in aggregating
+  // across the columns of the image
 
   while ((col < n) & (row < m))
   {
@@ -150,31 +152,45 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
     float d0 = 0;
     float d1 = 0;
     float d2 = 0;
-    //ind = row * n + col;
-    //int next_ind = row * n + col + 1;
 
+    // threads from only one warp will handle rightward aggregation across the
+    // region that has been loaded into shared memory
+    // for threads where threadIdx.y is 0, now threadIdx.x will index the rows
     if (threadIdx.y == 0)
     {
-      // TODO: make sure that agg_row advances each time threadblock
-      // advances across image
-      int agg_row = threadIdx.x + blockIdx.y + blockDim.y
-      for(int k = 0; (k < n) & (k < blockDim.x); k++)
+      int agg_row = threadIdx.x + blockIdx.y * blockDim.y;
+      int start_K = K;
+      int local_K = 0;
+      
+      if (agg_row < m)
       {
-        
-        // TODO: finish this
-        float d3 = MinArray[threadIdx.y][threadIdx.x-1] + (float) P2;
-        for (int d = 0; d < D; d+=D_STEP){
-          // for each d I need dp[{d-1, d, d+1}, row-1, col],
-          dp[next_ind] = cost_image[next_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
-          ind += (depth_dim_size * D_STEP);
+        for(; (K < (n - 1)) && (K < (start_K + SHMEM_SIZE)); K++)
+        {
+          //printf("K: %d, local_K: %d \n", K, local_K);
+          float d3 = MinArray[threadIdx.x][local_K] + (float) P2;
+          
+          int ind = agg_row * n + K;
+          int next_ind = agg_row * n + K + 1;
+
+          for (int d = 0; d < D; d+=D_STEP){
+            dp[next_ind] = cost_image[next_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            ind += (depth_dim_size * D_STEP);
+          }
+          local_K++;
         }
       }
+
     }
 
     // this sync could probably be removed, only has effect for thread with lowest threadIdx.x in each block
-    __syncthreads();
-
+    //__syncthreads();
+    if (threadIdx.y == 0 && threadIdx.x == 31)
+    printf("col: %d, K: %d \n", col, K);
     col+=blockDim.x;
+    
+    
+
+
   }
 
 }

@@ -177,7 +177,8 @@ class TestVerticalAggregation(unittest.TestCase):
 
         print("L sum: %f" % s1)
         print("out sum: %f" % s2)
-        #pdb.set_trace()
+        t = [np.sum(out[:,:,i]) for i in range(out.shape[2])]
+        pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, L)))
 
 

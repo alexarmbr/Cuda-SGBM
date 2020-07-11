@@ -223,7 +223,7 @@ class SemiGlobalMatching(_BasicStereo):
             I,J = self.get_starting_indices((u,v), (m,n))
             count = 0
             while len(I) > 0:
-                if count % 64 == 0:
+                if count % 32 == 0:
                     cum_min = np.min(L, axis = 2)
                 min_val = cum_min[I-u, J-v]
                 for d in range(D):
