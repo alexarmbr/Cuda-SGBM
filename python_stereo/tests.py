@@ -148,24 +148,28 @@ class TestVerticalAggregation(unittest.TestCase):
         d,rows,cols = cost_images.shape
         d_step = 1
         
+        shmem_size = 32
         compiler_constants = {
             'D_STEP':d_step,
             'D':d,
             'ARR_SIZE':math.floor(d/d_step),
             'P1':5,
-            'P2':90000
+            'P2':90000,
+            'SHMEM_SIZE':shmem_size
         }
         build_options = [format_compiler_constants(compiler_constants)]
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
 
 
 
-        r_aggregate = mod.get_function("r_aggregate_naive")
+        r_aggregate = mod.get_function("r_aggregate")
         out = np.zeros_like(L)
         out = np.ascontiguousarray(out, dtype = np.float32)
+        vertical_blocks = int(math.ceil(rows/shmem_size))
         t1 = time()
+        # pycuda complains when block size is greater than 32 x 32
         r_aggregate(drv.Out(out), drv.In(cost_images),
-        np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
+        np.int32(rows), np.int32(cols), block = (shmem_size,shmem_size,1), grid = (1,vertical_blocks)) 
         print("cuda aggregate cost %f" % (time() - t1))
         drv.stop_profiler()
         s1 = np.sum(np.float64(L))
@@ -226,7 +230,8 @@ class TestVerticalAggregation(unittest.TestCase):
             'D':d,
             'ARR_SIZE':math.floor(d/d_step),
             'P1':5,
-            'P2':90000
+            'P2':90000,
+            'SHMEM_SIZE':64
         }
         build_options = [format_compiler_constants(compiler_constants)]
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)

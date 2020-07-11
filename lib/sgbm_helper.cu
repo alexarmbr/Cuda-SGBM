@@ -130,41 +130,51 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
 {
   int row = threadIdx.y + blockIdx.y * blockDim.y;
   int col = threadIdx.x;
+  int depth_dim_size = m*n;
+  //__shared__ float MinArray[SHMEM_SIZE][SHMEM_SIZE];
 
-  while (col < n)
+  while ((col < n) & (row < m))
   {
-    __shared__ float MinArray[blockDim.y][blockDim.x];
-    depth_dim_size = m*n;
     int ind = row * n + col;
-    prev_min = 100000000.0;
+    int prev_min = 100000000.0;
   
     for (int depth = 0; depth < D; depth+=D_STEP){
       prev_min = fminf(dp[ind], prev_min);
       ind += (depth_dim_size * D_STEP);
     }
   
-    MinArray[row][col] = prev_min;
+    MinArray[threadIdx.y][threadIdx.x] = prev_min;
     __syncthreads();
   
   
     float d0 = 0;
     float d1 = 0;
     float d2 = 0;
-    //float d3 = prev_min + (float) P2;
-    ind = row * n + col;
-  
-    if (col > 0)
-      float d3 = MinArray[blockDim.y][blockDim.x-1] + (float P2);
-    
-  
-    for (int d = 0; d < D; d+=D_STEP){
-      // for each d I need dp[{d-1, d, d+1}, row-1, col],
-      dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
-      ind += (depth_dim_size * D_STEP);
-      current_ind += (depth_dim_size * D_STEP);
-    }
-    col+=blockDim.x;
+    //ind = row * n + col;
+    //int next_ind = row * n + col + 1;
 
+    if (threadIdx.y == 0)
+    {
+      // TODO: make sure that agg_row advances each time threadblock
+      // advances across image
+      int agg_row = threadIdx.x + blockIdx.y + blockDim.y
+      for(int k = 0; (k < n) & (k < blockDim.x); k++)
+      {
+        
+        // TODO: finish this
+        float d3 = MinArray[threadIdx.y][threadIdx.x-1] + (float) P2;
+        for (int d = 0; d < D; d+=D_STEP){
+          // for each d I need dp[{d-1, d, d+1}, row-1, col],
+          dp[next_ind] = cost_image[next_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+          ind += (depth_dim_size * D_STEP);
+        }
+      }
+    }
+
+    // this sync could probably be removed, only has effect for thread with lowest threadIdx.x in each block
+    __syncthreads();
+
+    col+=blockDim.x;
   }
 
 }
@@ -197,7 +207,7 @@ __global__ void vertical_aggregate(float *dp, float *cost_image,
         // calculate min cost disparity for this column from row-1
         //#pragma unroll
         for (int depth = 0; depth < D; depth+=D_STEP){
-          prev_min = fminf(cost_image[ind], prev_min);
+          prev_min = fminf(dp[ind], prev_min);
           ind += (depth_dim_size * D_STEP);
           //arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
           //arr_ind++;

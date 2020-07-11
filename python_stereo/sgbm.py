@@ -132,7 +132,7 @@ class SemiGlobalMatching(_BasicStereo):
         cost_images = self.compute_disparity_img(cim1, cim2, D)
         
         t1 = t.time()
-        cost_images = self.aggregate_cost(cost_images)
+        cost_images = self.aggregate_cost_optimization_test(cost_images)
         #print(f"aggregate cost time: {t.time() - t1}")
         t1 = t.time()
         min_cost_im = np.argmin(cost_images, axis=2)
@@ -222,8 +222,9 @@ class SemiGlobalMatching(_BasicStereo):
         for (u,v) in self.directions:
             I,J = self.get_starting_indices((u,v), (m,n))
             count = 0
-            cum_min = np.min(L, axis = 2)
             while len(I) > 0:
+                if count % 64 == 0:
+                    cum_min = np.min(L, axis = 2)
                 min_val = cum_min[I-u, J-v]
                 for d in range(D):
                     L[I,J,d] += cost_array[I, J, d] + self.dp_criteria(L[I-u, J-v, :], d, min_val)
