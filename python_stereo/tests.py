@@ -100,16 +100,21 @@ class TestCensusTransform(unittest.TestCase):
 
         self.assertTrue(np.all(np.isclose(census1, census2)))
         
-        
 
 
-class TestVerticalAggregation(unittest.TestCase):
+# TODO: horizontal is basically the same speed as vertical
+# this probably means vertical can be sped up
+
+
+class TestAggregation(unittest.TestCase):
         
     def horizontal_test(self):
         
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
         im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
+        #im1 = im1[:32,:,:]
+        #im2 = im2[:32,:,:]
 
         stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
         window_size=3, resize=(640,480))
@@ -124,7 +129,7 @@ class TestVerticalAggregation(unittest.TestCase):
         cim1 = stereo.census_transform(stereo.im1)
         cim2 = stereo.census_transform(stereo.im2)
         #print(f"census transform time {time() - t1}")
-        
+        #pdb.set_trace()
         if not stereo.reversed:
             D = range(int(stereo.params['ndisp']))
         else:
@@ -139,7 +144,7 @@ class TestVerticalAggregation(unittest.TestCase):
         # direction == (1,0)
         stereo.directions = [(0,1)]
         t1 = time()
-        L = stereo.aggregate_cost(cost_images)
+        L = stereo.aggregate_cost_optimization_test(cost_images)
         print("python aggregate cost %f" % (time() - t1))
         L = L.transpose((2,0,1))
         
@@ -148,7 +153,7 @@ class TestVerticalAggregation(unittest.TestCase):
         d,rows,cols = cost_images.shape
         d_step = 1
         
-        shmem_size = 32
+        shmem_size = 16
         compiler_constants = {
             'D_STEP':d_step,
             'D':d,
@@ -177,8 +182,18 @@ class TestVerticalAggregation(unittest.TestCase):
 
         print("L sum: %f" % s1)
         print("out sum: %f" % s2)
-        t = [np.sum(out[:,:,i]) for i in range(out.shape[2])]
-        pdb.set_trace()
+        t1 = [np.sum(out[:,:,i]) for i in range(out.shape[2])]
+        t2 = [np.sum(out[:,i,:]) for i in range(out.shape[1])]
+        t3 = [np.sum(out[i,:,:]) for i in range(out.shape[0])]
+        t4 = [np.sum(L[:,:,i]) for i in range(L.shape[2])]
+        t5 = [np.sum(L[:,i,:]) for i in range(L.shape[1])]
+        t6 = [np.sum(L[i,:,:]) for i in range(L.shape[0])]
+        diff1 = [t4[i] - a for i,a in enumerate(t1)]
+        diff2 = [t5[i] - a for i,a in enumerate(t2)]
+        diff3 = [t6[i] - a for i,a in enumerate(t3)]
+
+
+        #pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, L)))
 
 

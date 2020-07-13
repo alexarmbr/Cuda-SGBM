@@ -103,7 +103,7 @@ __global__ void r_aggregate_naive(float *dp, float *cost_image, int m, int n)
         int ind = row * n + col - 1;
         
         for (int depth = 0; depth < D; depth+=D_STEP){
-          prev_min = fminf(cost_image[ind], prev_min);
+          prev_min = fminf(dp[ind], prev_min);
           ind += (depth_dim_size * D_STEP);
         }
 
@@ -126,6 +126,9 @@ __global__ void r_aggregate_naive(float *dp, float *cost_image, int m, int n)
   }
 }
 
+
+
+
 __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
 {
   int row = threadIdx.y + blockIdx.y * blockDim.y;
@@ -138,14 +141,15 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
   while ((col < n) & (row < m))
   {
     int ind = row * n + col;
-    int prev_min = 100000000.0;
-  
+    float prev_min = 100000000.0;
+    
     for (int depth = 0; depth < D; depth+=D_STEP){
       prev_min = fminf(dp[ind], prev_min);
       ind += (depth_dim_size * D_STEP);
     }
   
     MinArray[threadIdx.y][threadIdx.x] = prev_min;
+    //MinArray[threadIdx.y][threadIdx.x] = (float) row * n + col;
     __syncthreads();
   
   
@@ -166,40 +170,25 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
       {
         for(; (K < (n - 1)) && (K < (start_K + SHMEM_SIZE)); K++)
         {
-          //printf("K: %d, local_K: %d \n", K, local_K);
           float d3 = MinArray[threadIdx.x][local_K] + (float) P2;
-          
-          int ind = agg_row * n + K;
-          int next_ind = agg_row * n + K + 1;
 
+          int ind = agg_row * n + K + 1;
           for (int d = 0; d < D; d+=D_STEP){
-            dp[next_ind] = cost_image[next_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            dp[ind] = cost_image[ind] + dp_criteria(dp, ind-1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            //dp[ind] = cost_image[ind] + dp[ind - 1];
             ind += (depth_dim_size * D_STEP);
           }
           local_K++;
         }
       }
-
     }
 
-    // this sync could probably be removed, only has effect for thread with lowest threadIdx.x in each block
-    //__syncthreads();
-    if (threadIdx.y == 0 && threadIdx.x == 31)
-    printf("col: %d, K: %d \n", col, K);
+    __syncthreads();
     col+=blockDim.x;
-    
-    
-
 
   }
 
 }
-
-
-
-
-
-
 
 
   
