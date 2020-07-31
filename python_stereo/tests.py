@@ -272,7 +272,7 @@ class TestAggregation(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(out, L)))
 
 
-    def diagonal_test(self):
+    def diagonal_tl_br_test(self):
             
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -344,6 +344,80 @@ class TestAggregation(unittest.TestCase):
         print("out sum: %f" % s2)
         #pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, L)))
+
+
+
+    def diagonal_tr_bl_test(self):
+            
+        IMAGE_DIR = "Backpack-perfect"
+        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
+
+        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+        window_size=3, resize=(640,480))
+
+        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+        stereo.set_params(params)
+        stereo.params['ndisp'] = 50
+        t1 = time()
+
+        assert stereo.p1 is not None, "parameters have not been set"
+        t1 = time()
+        cim1 = stereo.census_transform(stereo.im1)
+        cim2 = stereo.census_transform(stereo.im2)
+        #print(f"census transform time {time() - t1}")
+        
+        if not stereo.reversed:
+            D = range(int(stereo.params['ndisp']))
+        else:
+            D = reversed(range(int(-stereo.params['ndisp']), 1))
+        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+        cost_images = np.float32(cost_images)
+        m, n, D = cost_images.shape
+        # direction == (1,0)
+        stereo.directions = [(1,1)]
+        t1 = time()
+        L = stereo.aggregate_cost(cost_images)
+        print("python aggregate cost %f" % (time() - t1))
+        L = L.transpose((2,0,1))
+        
+        cost_images = cost_images.transpose((2,0,1))
+        cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
+        d,rows,cols = cost_images.shape
+        d_step = 1
+        
+        compiler_constants = {
+            'D_STEP':d_step,
+            'D':d,
+            'ARR_SIZE':math.floor(d/d_step),
+            'P1':5,
+            'P2':90000,
+            'SHMEM_SIZE':64
+        }
+        build_options = [format_compiler_constants(compiler_constants)]
+        mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
+        
+        
+        diagonal_aggregate = mod.get_function("diagonal_tr_bl_aggregate")
+        out = np.zeros_like(L)
+        out = np.ascontiguousarray(out, dtype = np.float32)
+        t1 = time()
+        diagonal_aggregate(drv.Out(out), drv.In(cost_images),
+        np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,-1))
+        print("cuda aggregate cost %f" % (time() - t1))
+        drv.stop_profiler()
+        s1 = np.sum(np.float64(L))
+        s2 = np.sum(np.float64(out))
+
+        print("L sum: %f" % s1)
+        print("out sum: %f" % s2)
+        self.assertTrue(np.all(np.isclose(out, L)))
+
+
+
+
+
+
 
 
 
