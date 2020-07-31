@@ -132,7 +132,7 @@ class SemiGlobalMatching(_BasicStereo):
         cost_images = self.compute_disparity_img(cim1, cim2, D)
         
         t1 = t.time()
-        cost_images = self.aggregate_cost_optimization_test(cost_images)
+        cost_images = self.aggregate_cost(cost_images)
         #print(f"aggregate cost time: {t.time() - t1}")
         t1 = t.time()
         min_cost_im = np.argmin(cost_images, axis=2)
