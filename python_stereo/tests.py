@@ -198,7 +198,7 @@ class TestAggregation(unittest.TestCase):
 
 
 
-    def vertical_test(self):
+    def vertical_down_test(self):
         
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -253,7 +253,7 @@ class TestAggregation(unittest.TestCase):
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
         
         
-        vertical_aggregate = mod.get_function("vertical_aggregate")
+        vertical_aggregate = mod.get_function("vertical_aggregate_down")
         out = np.zeros_like(L)
         out = np.ascontiguousarray(out, dtype = np.float32)
         t1 = time()
