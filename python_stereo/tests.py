@@ -108,7 +108,7 @@ class TestCensusTransform(unittest.TestCase):
 
 class TestAggregation(unittest.TestCase):
         
-    def horizontal_test(self):
+    def test_horizontal_right(self):
         
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -196,9 +196,93 @@ class TestAggregation(unittest.TestCase):
         #pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, L)))
 
+    def test_horizontal_left(self):
+        
+        IMAGE_DIR = "Backpack-perfect"
+        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
+        #im1 = im1[:32,:,:]
+        #im2 = im2[:32,:,:]
+
+        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+        window_size=3, resize=(640,480))
+
+        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+        stereo.set_params(params)
+        stereo.params['ndisp'] = 50
+        t1 = time()
+
+        assert stereo.p1 is not None, "parameters have not been set"
+        t1 = time()
+        cim1 = stereo.census_transform(stereo.im1)
+        cim2 = stereo.census_transform(stereo.im2)
+        #print(f"census transform time {time() - t1}")
+        #pdb.set_trace()
+        if not stereo.reversed:
+            D = range(int(stereo.params['ndisp']))
+        else:
+            D = reversed(range(int(-stereo.params['ndisp']), 1))
+        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+        cost_images = np.float32(cost_images)
+        ##cost_images = cost_images[:,:,8:45]
+        #cost_images = cost_images[:,:,9:50]
+        #shape = (480,640,36)
+        #cost_images = np.float32(np.random.normal(loc=100, size=shape))
+        m, n, D = cost_images.shape
+        # direction == (1,0)
+        stereo.directions = [(0,-1)]
+        t1 = time()
+        L = stereo.aggregate_cost_optimization_test(cost_images)
+        print("python aggregate cost %f" % (time() - t1))
+        L = L.transpose((2,0,1))
+        
+        cost_images = cost_images.transpose((2,0,1))
+        cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
+        d,rows,cols = cost_images.shape
+        d_step = 1
+        
+        shmem_size = 16
+        compiler_constants = {
+            'D_STEP':d_step,
+            'D':d,
+            'ARR_SIZE':math.floor(d/d_step),
+            'P1':5,
+            'P2':90000,
+            'SHMEM_SIZE':shmem_size
+        }
+        build_options = [format_compiler_constants(compiler_constants)]
+        mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
 
 
-    def vertical_down_test(self):
+
+        l_aggregate = mod.get_function("l_aggregate")
+        out = np.zeros_like(L)
+        out = np.ascontiguousarray(out, dtype = np.float32)
+        vertical_blocks = int(math.ceil(rows/shmem_size))
+        t1 = time()
+        # pycuda complains when block size is greater than 32 x 32
+        l_aggregate(drv.Out(out), drv.In(cost_images),
+        np.int32(rows), np.int32(cols), block = (shmem_size,shmem_size,1), grid = (1,vertical_blocks)) 
+        print("cuda aggregate cost %f" % (time() - t1))
+        drv.stop_profiler()
+        s1 = np.sum(np.float64(L))
+        s2 = np.sum(np.float64(out))
+
+        print("L sum: %f" % s1)
+        print("out sum: %f" % s2)
+
+
+        #pdb.set_trace()
+        self.assertTrue(np.all(np.isclose(out, L)))
+
+
+
+
+
+
+
+
+    def test_vertical_down(self):
         
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -272,7 +356,83 @@ class TestAggregation(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(out, L)))
 
 
-    def diagonal_tl_br_test(self):
+    def test_vertical_up(self):
+        
+        IMAGE_DIR = "Backpack-perfect"
+        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
+
+        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+        window_size=3, resize=(640,480))
+
+        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+        stereo.set_params(params)
+        stereo.params['ndisp'] = 50
+        t1 = time()
+
+        assert stereo.p1 is not None, "parameters have not been set"
+        t1 = time()
+        cim1 = stereo.census_transform(stereo.im1)
+        cim2 = stereo.census_transform(stereo.im2)
+        #print(f"census transform time {time() - t1}")
+        
+        if not stereo.reversed:
+            D = range(int(stereo.params['ndisp']))
+        else:
+            D = reversed(range(int(-stereo.params['ndisp']), 1))
+        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+        cost_images = np.float32(cost_images)
+        ##cost_images = cost_images[:,:,8:45]
+        #cost_images = cost_images[:,:,9:50]
+        #shape = (480,640,36)
+        #cost_images = np.float32(np.random.normal(loc=100, size=shape))
+        m, n, D = cost_images.shape
+        # direction == (1,0)
+        stereo.directions = [(-1,0)]
+        t1 = time()
+        L = stereo.aggregate_cost(cost_images)
+        print("python aggregate cost %f" % (time() - t1))
+        L = L.transpose((2,0,1))
+        
+        cost_images = cost_images.transpose((2,0,1))
+        cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
+        d,rows,cols = cost_images.shape
+        d_step = 1
+        
+        compiler_constants = {
+            'D_STEP':d_step,
+            'D':d,
+            'ARR_SIZE':math.floor(d/d_step),
+            'P1':5,
+            'P2':90000,
+            'SHMEM_SIZE':64
+        }
+        build_options = [format_compiler_constants(compiler_constants)]
+        mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
+        
+        
+        vertical_aggregate = mod.get_function("vertical_aggregate_up")
+        out = np.zeros_like(L)
+        out = np.ascontiguousarray(out, dtype = np.float32)
+        t1 = time()
+        vertical_aggregate(drv.Out(out), drv.In(cost_images),
+        np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
+        print("cuda aggregate cost %f" % (time() - t1))
+        drv.stop_profiler()
+        s1 = np.sum(np.float64(L))
+        s2 = np.sum(np.float64(out))
+
+
+
+        print("L sum: %f" % s1)
+        print("out sum: %f" % s2)
+        #pdb.set_trace()
+        self.assertTrue(np.all(np.isclose(out, L)))
+
+
+
+
+    def test_diagonal_tl_br(self):
             
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -347,7 +507,7 @@ class TestAggregation(unittest.TestCase):
 
 
 
-    def diagonal_tr_bl_test(self):
+    def test_diagonal_tr_bl(self):
             
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -416,7 +576,7 @@ class TestAggregation(unittest.TestCase):
 
 
 
-    def diagonal_br_tl_test(self):
+    def test_diagonal_br_tl(self):
             
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -484,7 +644,7 @@ class TestAggregation(unittest.TestCase):
 
 
 
-    def diagonal_bl_tr_test(self):
+    def test_diagonal_bl_tr(self):
             
         IMAGE_DIR = "Backpack-perfect"
         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
@@ -552,83 +712,83 @@ class TestAggregation(unittest.TestCase):
 
 
 
-class Test3dMin(unittest.TestCase):
+# class Test3dMin(unittest.TestCase):
 
-    def test_slice_arr(self):
-        IMAGE_DIR = "Backpack-perfect"
-        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
-        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
+#     def test_slice_arr(self):
+#         IMAGE_DIR = "Backpack-perfect"
+#         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+#         im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
 
-        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
-        window_size=3, resize=(640,480))
+#         stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+#         window_size=3, resize=(640,480))
 
-        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
-        stereo.set_params(params)
-        stereo.params['ndisp'] = 50
+#         params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+#         stereo.set_params(params)
+#         stereo.params['ndisp'] = 50
 
-        cim1 = stereo.census_transform(stereo.im1)
-        cim2 = stereo.census_transform(stereo.im2)
-        if not stereo.reversed:
-            D = range(int(stereo.params['ndisp']))
-        else:
-            D = reversed(range(int(-stereo.params['ndisp']), 1))
-        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
-        cost_images = cost_images.transpose((2,0,1))
-        cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
+#         cim1 = stereo.census_transform(stereo.im1)
+#         cim2 = stereo.census_transform(stereo.im2)
+#         if not stereo.reversed:
+#             D = range(int(stereo.params['ndisp']))
+#         else:
+#             D = reversed(range(int(-stereo.params['ndisp']), 1))
+#         cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+#         cost_images = cost_images.transpose((2,0,1))
+#         cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
         
-        #cost_images  = np.array(range(5*4*3), dtype = np.float32).reshape((5,4,3))
-        d, rows, cols = cost_images.shape
-        d_step = 1
-        build_options = []
-        mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
-        min_3d_mat = mod.get_function("slice_arr")
-        out = np.zeros((rows, cols), dtype=np.float32)
-        arr_slice = 44
-        min_3d_mat(drv.Out(out), drv.In(cost_images),
-        np.int32(rows), np.int32(cols), np.int32(arr_slice), block = (256,1,1), grid = (2,1))
-        self.assertTrue(np.all(np.isclose(out, cost_images[arr_slice,:,:])))
+#         #cost_images  = np.array(range(5*4*3), dtype = np.float32).reshape((5,4,3))
+#         d, rows, cols = cost_images.shape
+#         d_step = 1
+#         build_options = []
+#         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
+#         min_3d_mat = mod.get_function("slice_arr")
+#         out = np.zeros((rows, cols), dtype=np.float32)
+#         arr_slice = 44
+#         min_3d_mat(drv.Out(out), drv.In(cost_images),
+#         np.int32(rows), np.int32(cols), np.int32(arr_slice), block = (256,1,1), grid = (2,1))
+#         self.assertTrue(np.all(np.isclose(out, cost_images[arr_slice,:,:])))
 
 
 
-    def test_min(self):
-        IMAGE_DIR = "Backpack-perfect"
-        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
-        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
+#     def test_min(self):
+#         IMAGE_DIR = "Backpack-perfect"
+#         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+#         im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
 
-        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
-        window_size=3, resize=(640,480))
+#         stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+#         window_size=3, resize=(640,480))
 
-        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
-        stereo.set_params(params)
-        stereo.params['ndisp'] = 50
+#         params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+#         stereo.set_params(params)
+#         stereo.params['ndisp'] = 50
 
-        cim1 = stereo.census_transform(stereo.im1)
-        cim2 = stereo.census_transform(stereo.im2)
-        if not stereo.reversed:
-            D = range(int(stereo.params['ndisp']))
-        else:
-            D = reversed(range(int(-stereo.params['ndisp']), 1))
-        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
-        cost_images = cost_images.transpose((2,0,1))
-        cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
+#         cim1 = stereo.census_transform(stereo.im1)
+#         cim2 = stereo.census_transform(stereo.im2)
+#         if not stereo.reversed:
+#             D = range(int(stereo.params['ndisp']))
+#         else:
+#             D = reversed(range(int(-stereo.params['ndisp']), 1))
+#         cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+#         cost_images = cost_images.transpose((2,0,1))
+#         cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
 
-        d, rows, cols = cost_images.shape
-        d_step = 2
+#         d, rows, cols = cost_images.shape
+#         d_step = 2
 
-        compiler_constants = {
-            'D_STEP':2,
-            'D':d,
-            'ARR_SIZE':math.floor(d/d_step),
-            'P1':5,
-            'P2':90000
-        }
-        build_options = [format_compiler_constants(compiler_constants)]
-        mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
-        min_3d_mat = mod.get_function("min_3d_mat")
-        out = np.zeros((rows, cols), dtype = np.float32)
-        min_3d_mat(drv.Out(out), drv.In(cost_images),
-        np.int32(rows), np.int32(cols), block = (256,1,1), grid = (2,1))
-        self.assertTrue(np.all(np.isclose(out, np.min(cost_images[::d_step, :, :], axis=0))))
+#         compiler_constants = {
+#             'D_STEP':2,
+#             'D':d,
+#             'ARR_SIZE':math.floor(d/d_step),
+#             'P1':5,
+#             'P2':90000
+#         }
+#         build_options = [format_compiler_constants(compiler_constants)]
+#         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
+#         min_3d_mat = mod.get_function("min_3d_mat")
+#         out = np.zeros((rows, cols), dtype = np.float32)
+#         min_3d_mat(drv.Out(out), drv.In(cost_images),
+#         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (2,1))
+#         self.assertTrue(np.all(np.isclose(out, np.min(cost_images[::d_step, :, :], axis=0))))
 
         
 

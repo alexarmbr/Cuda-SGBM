@@ -150,13 +150,13 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
 __global__ void l_aggregate(float *dp, float *cost_image, int m, int n)
 {
   int row = threadIdx.y + blockIdx.y * blockDim.y;
-  int col = m - 1 - threadIdx.x;
+  int col = n - 1 - threadIdx.x;
   int depth_dim_size = m*n;
   __shared__ float MinArray[SHMEM_SIZE][SHMEM_SIZE];
-  int K = m-1; // this variable keeps track of the progress in aggregating
+  int K = n-1; // this variable keeps track of the progress in aggregating
   // across the columns of the image
 
-  while ((col < n) & (row < m))
+  while ((col >= 0) & (row < m))
   {
     int ind = row * n + col;
     float prev_min = 100000000.0;
@@ -166,7 +166,7 @@ __global__ void l_aggregate(float *dp, float *cost_image, int m, int n)
       ind += (depth_dim_size * D_STEP);
     }
   
-    MinArray[threadIdx.y][threadIdx.x] = prev_min;
+    MinArray[threadIdx.y][SHMEM_SIZE - 1 - threadIdx.x] = prev_min;
     __syncthreads();
   
     float d0 = 0;
@@ -187,7 +187,7 @@ __global__ void l_aggregate(float *dp, float *cost_image, int m, int n)
 
       if (agg_row < m)
       {
-        for(; (K > 0) && (K < (start_K - SHMEM_SIZE)); K--)
+        for(; (K > 0) && (K > (start_K - SHMEM_SIZE)); K--)
         {
           float d3 = MinArray[threadIdx.x][local_K] + (float) P2;
 
@@ -270,7 +270,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
       // slices
       while(col < n)
       {
-        for (int row = m-2; row > 0; row--)
+        for (int row = m-2; row >= 0; row--)
         {
           //int arr_ind = 0;
           float prev_min = 100000000.0;
