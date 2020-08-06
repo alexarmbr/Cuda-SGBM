@@ -565,6 +565,7 @@ class TestAggregation(unittest.TestCase):
         diagonal_aggregate(drv.Out(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
         print("cuda aggregate cost %f" % (time() - t1))
+        
         drv.stop_profiler()
         s1 = np.sum(np.float64(L))
         s2 = np.sum(np.float64(out))
