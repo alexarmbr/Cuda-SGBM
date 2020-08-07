@@ -740,7 +740,8 @@ class TestAggregation(unittest.TestCase):
         cost_images = np.float32(cost_images)
         m, n, D = cost_images.shape
         # direction == (1,0)
-        stereo.directions = [(-1, 1)]
+        stereo.directions = [(1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+        #stereo.directions = [(0,1)]
         t1 = time()
         L = stereo.aggregate_cost(cost_images)
         print("python aggregate cost %f" % (time() - t1))
@@ -750,6 +751,8 @@ class TestAggregation(unittest.TestCase):
         cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
         d,rows,cols = cost_images.shape
         d_step = 1
+        rows = np.int32(rows)
+        cols = np.int32(cols)
         
         compiler_constants = {
             'D_STEP':d_step,
@@ -762,22 +765,48 @@ class TestAggregation(unittest.TestCase):
         build_options = [format_compiler_constants(compiler_constants)]
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
         
-        
-        diagonal_aggregate = mod.get_function("diagonal_bl_tr_aggregate")
-        
-        out = np.zeros_like(L)
-        out = np.ascontiguousarray(out, dtype = np.float32)
+        shmem_size = 16
+        vertical_blocks = int(math.ceil(rows/shmem_size))
+
+
+
+        #r_aggregate = mod.get_function('r_aggregate')
+        vertical_aggregate_down = mod.get_function('vertical_aggregate_down')
+        vertical_aggregate_up = mod.get_function('vertical_aggregate_up')
+        diagonal_br_tl_aggregate = mod.get_function('diagonal_br_tl_aggregate')
+        diagonal_tl_br_aggregate = mod.get_function('diagonal_tl_br_aggregate')
+        diagonal_tr_bl_aggregate = mod.get_function('diagonal_tr_bl_aggregate')
+        diagonal_bl_tr_aggregate = mod.get_function('diagonal_bl_tr_aggregate')
+        #l_aggregate = mod.get_function('l_aggregate')
+
         t1 = time()
-        diagonal_aggregate(drv.Out(out), drv.In(cost_images),
-        np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
+        cost_images_ptr = drv.to_device(cost_images)
+        dp_ptr = drv.mem_alloc(cost_images.nbytes)
+
+        vertical_aggregate_down(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
+        vertical_aggregate_up(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
+        
+        #r_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (shmem_size, shmem_size, 1), grid = (1, vertical_blocks))
+        #l_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (shmem_size, shmem_size, 1), grid = (1, vertical_blocks))
+        
+        diagonal_tl_br_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
+        diagonal_bl_tr_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
+
+        diagonal_tr_bl_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
+        diagonal_br_tl_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
+
+
+        
         print("cuda aggregate cost %f" % (time() - t1))
         drv.stop_profiler()
+
+        agg_image = drv.from_device(dp_ptr, cost_images.shape, dtype = np.float32)
         s1 = np.sum(np.float64(L))
-        s2 = np.sum(np.float64(out))
+        s2 = np.sum(np.float64(agg_image))
 
         print("L sum: %f" % s1)
         print("out sum: %f" % s2)
-        self.assertTrue(np.all(np.isclose(out, L)))
+        self.assertTrue(np.all(np.isclose(agg_image, L)))
 
 
 
