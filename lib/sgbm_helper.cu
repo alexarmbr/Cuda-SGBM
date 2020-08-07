@@ -131,7 +131,7 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
 
           int ind = agg_row * n + K + 1;
           for (int d = 0; d < D; d+=D_STEP){
-            dp[ind] = cost_image[ind] + dp_criteria(dp, ind-1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            dp[ind] += cost_image[ind] + dp_criteria(dp, ind-1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
             //dp[ind] = cost_image[ind] + dp[ind - 1];
             ind += (depth_dim_size * D_STEP);
           }
@@ -193,7 +193,7 @@ __global__ void l_aggregate(float *dp, float *cost_image, int m, int n)
 
           int ind = agg_row * n + K - 1;
           for (int d = 0; d < D; d+=D_STEP){
-            dp[ind] = cost_image[ind] + dp_criteria(dp, ind+1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            dp[ind] += cost_image[ind] + dp_criteria(dp, ind+1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
             //dp[ind] = cost_image[ind] + dp[ind - 1];
             ind += (depth_dim_size * D_STEP);
           }
@@ -249,7 +249,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
         // todo: try having this loop go from 1 to d-1 and removing the if else
         for (int d = 0; d < D; d+=D_STEP){
           // for each d I need dp[{d-1, d, d+1}, row-1, col],
-          dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+          dp[current_ind] += cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
           ind += (depth_dim_size * D_STEP);
           current_ind += (depth_dim_size * D_STEP);
         }
@@ -297,7 +297,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
           // todo: try having this loop go from 1 to d-1 and removing the if else
           for (int d = 0; d < D; d+=D_STEP){
             // for each d I need dp[{d-1, d, d+1}, row-1, col],
-            dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            dp[current_ind] += cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
             ind += (depth_dim_size * D_STEP);
             current_ind += (depth_dim_size * D_STEP);
           }
@@ -344,7 +344,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
           // todo: try having this loop go from 1 to d-1 and removing the if else
           for (int d = 0; d < D; d+=D_STEP){
             // for each d I need dp[{d-1, d, d+1}, row-1, col],
-            dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            dp[current_ind] += cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
             ind += (depth_dim_size * D_STEP);
             current_ind += (depth_dim_size * D_STEP);
           }
@@ -397,7 +397,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
             // todo: try having this loop go from 1 to d-1 and removing the if else
             for (int d = 0; d < D; d+=D_STEP){
               // for each d I need dp[{d-1, d, d+1}, row-1, col],
-              dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+              dp[current_ind] += cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
               ind += (depth_dim_size * D_STEP);
               current_ind += (depth_dim_size * D_STEP);
             }
@@ -452,7 +452,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
             // todo: try having this loop go from 1 to d-1 and removing the if else
             for (int d = 0; d < D; d+=D_STEP){
               // for each d I need dp[{d-1, d, d+1}, row-1, col],
-              dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+              dp[current_ind] += cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
               ind += (depth_dim_size * D_STEP);
               current_ind += (depth_dim_size * D_STEP);
             }
@@ -506,7 +506,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
           // todo: try having this loop go from 1 to d-1 and removing the if else
           for (int d = 0; d < D; d+=D_STEP){
             // for each d I need dp[{d-1, d, d+1}, row-1, col],
-            dp[current_ind] = cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            dp[current_ind] += cost_image[current_ind] + dp_criteria(dp, ind, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
             ind += (depth_dim_size * D_STEP);
             current_ind += (depth_dim_size * D_STEP);
           }

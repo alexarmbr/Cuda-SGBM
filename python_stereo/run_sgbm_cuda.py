@@ -1,6 +1,21 @@
-
-
-
+import unittest
+from sgbm import SemiGlobalMatching, format_compiler_constants
+import ctypes
+import numpy.ctypeslib as ctl
+from numpy.ctypeslib import ndpointer
+import cv2
+import matplotlib.pyplot as plt
+from time import time
+import os
+import pdb
+import pycuda.autoinit
+import pycuda.driver as drv
+import numpy as np
+from pycuda.compiler import SourceModule
+import math
+from time import time
+import pdb
+IMAGE_DIR = "Adirondack-perfect"
 
 
 if __name__ == "__main__":
@@ -33,10 +48,10 @@ if __name__ == "__main__":
     m, n, D = cost_images.shape
     
 
-    t1 = time()
-    L = stereo.aggregate_cost(cost_images)
-    print("python aggregate cost %f" % (time() - t1))
-    L = L.transpose((2,0,1))
+    #t1 = time()
+    #L = stereo.aggregate_cost(cost_images)
+    #print("python aggregate cost %f" % (time() - t1))
+    #L = L.transpose((2,0,1))
     
     cost_images = cost_images.transpose((2,0,1))
     cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
@@ -63,22 +78,21 @@ if __name__ == "__main__":
                     'diagonal_tl_br_aggregate', 'diagonal_tr_bl_aggregate',
                     'diagonal_br_tl_aggregate', 'diagonal_bl_tr_aggregate']
 
-    r_aggregate = mod.get_function('r_aggregate')
-    l_aggregate = mod.get_function('l_aggregate')
-    vertical_aggregate_down = mod.get_function('vertical_aggregate_down')
-    vertical_aggregate_up = mod.get_function('vertical_aggregate_up')
-    diagonal_br_tl_aggregate = mod.get_function('diagonal_br_tl_aggregate')
-    diagonal_tl_br_aggregate = mod.get_function('diagonal_tl_br_aggregate')
-    diagonal_tr_bl_aggregate = mod.get_function('diagonal_tr_bl_aggregate')
-    diagonal_bl_tr_aggregate = mod.get_function('diagonal_bl_tr_aggregate')
-
-
-    cost_images_ptr = drv.to_device(cost_images)
-    dp_ptr = drv.mem_alloc(cost_image.nbytes)
-    shmem_size = 16
-    vertical_blocks = int(math.ceil(rows/shmem_size))
+    #r_aggregate = mod.get_function('r_aggregate')
+    #vertical_aggregate_down = mod.get_function('vertical_aggregate_down')
+    #vertical_aggregate_up = mod.get_function('vertical_aggregate_up')
+    #diagonal_br_tl_aggregate = mod.get_function('diagonal_br_tl_aggregate')
+    #diagonal_tl_br_aggregate = mod.get_function('diagonal_tl_br_aggregate')
+    #diagonal_tr_bl_aggregate = mod.get_function('diagonal_tr_bl_aggregate')
+    #diagonal_bl_tr_aggregate = mod.get_function('diagonal_bl_tr_aggregate')
+    #l_aggregate = mod.get_function('l_aggregate')
 
     t1 = time()
+    cost_images_ptr = drv.to_device(cost_images)
+    dp_ptr = drv.mem_alloc(cost_images.nbytes)
+    shmem_size = 16
+    vertical_blocks = int(math.ceil(rows/shmem_size))
+    #pdb.set_trace()
 
     r_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (shmem_size, shmem_size, 1), grid = (1, vertical_blocks))
     l_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (shmem_size, shmem_size, 1), grid = (1, vertical_blocks))
@@ -88,14 +102,12 @@ if __name__ == "__main__":
     diagonal_tl_br_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
     diagonal_tr_bl_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
     diagonal_bl_tr_aggregate(dp_ptr, cost_images_ptr, rows, cols, block = (256, 1, 1), grid = (1,1))
-
-
-    diagonal_aggregate(drv.Out(out), drv.In(cost_images),
-    np.int32(rows), np.int32(cols), block = (256,1,1), grid = (1,1))
-
-
-
-
-
-
-    print("cuda aggregate cost %f" % (time() - t1))
+    
+    agg_image = drv.from_device(dp_ptr, cost_images.shape, dtype = np.int32)
+    print(f"aggregation time {time() - t1}")
+    #agg_image = agg_image.transpose((2,1,0))
+    min_cost_im = np.argmin(agg_image, axis=0)
+    agg_image = agg_image.transpose((2,1,0))
+    min_cost_im += 1
+    im = stereo.compute_depth(min_cost_im)
+    np.save("../out_images/testim.npy", im)
