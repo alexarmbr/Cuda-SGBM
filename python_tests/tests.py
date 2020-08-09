@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 from time import time
 import os
 import pdb
-import pycuda.autoinit
-import pycuda.driver as drv
+#import pycuda.autoinit
+#import pycuda.driver as drv
 import numpy as np
-from pycuda.compiler import SourceModule
+#from pycuda.compiler import SourceModule
 import math
 from time import time
-IMAGE_DIR = "Adirondack-perfect"
+IMAGE_DIR = "Backpack-perfect"
 
 
 
@@ -36,7 +36,7 @@ class TestCensusTransform(unittest.TestCase):
 
         t1 = time()
         census1 = stereo.census_transform(stereo.im1.copy()) # python implementation
-        #print(f"python census transform time: {time() - t1}")
+        print(f"python census transform time: {time() - t1}")
 
         
         # 
@@ -55,7 +55,7 @@ class TestCensusTransform(unittest.TestCase):
         stereo.im1.shape[0],
         stereo.im1.shape[1],
         3)
-        #print(f"c++ census transform time: {time() - t1}")
+        print(f"c++ census transform time: {time() - t1}")
 
         self.assertTrue(np.all(np.isclose(census1, census2)))
 
