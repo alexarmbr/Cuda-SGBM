@@ -101,9 +101,56 @@ class TestCensusTransform(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(census1, census2)))
         
 
+class TestShiftAndStack(unittest.TestCase):
+    
+    def test_shift_and_stack(self):
+        IMAGE_DIR = "Backpack-perfect"
+        im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
+        im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
 
-# TODO: horizontal is basically the same speed as vertical
-# this probably means vertical can be sped up
+        stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
+        window_size=3, resize=(640,480))
+
+        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+        stereo.set_params(params)
+        stereo.params['ndisp'] = 50
+        t1 = time()
+
+        assert stereo.p1 is not None, "parameters have not been set"
+        t1 = time()
+        cim1 = stereo.census_transform(stereo.im1)
+        cim2 = stereo.census_transform(stereo.im2)
+        #print(f"census transform time {time() - t1}")
+        #pdb.set_trace()
+        if not stereo.reversed:
+            D = range(int(stereo.params['ndisp']))
+        else:
+            D = reversed(range(int(-stereo.params['ndisp']), 1))
+        cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+        #cost_images = np.float32(cost_images)
+
+        lib = ctypes.cdll.LoadLibrary("../lib/sgbm_helper.so")
+        census = lib.census_transform
+        census.restype = None
+        census.argtypes = [ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
+                            ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
+                            ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
+                            ctypes.c_int,
+                            ctypes.c_int,
+                            ctypes.c_int]
+        
+        census2 = np.zeros(cost_images.shape, dtype = np.uint64)
+        t1 = time()
+        census(cim1.copy(),
+        cim2.copy(),
+        census2,
+        testim.shape[0],
+        testim.shape[1],
+        1)
+
+
+
+
 
 
 class TestAggregation(unittest.TestCase):

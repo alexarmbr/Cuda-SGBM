@@ -44,3 +44,33 @@ int rows, int cols, int csize)
 }
 
 
+extern "C" void shift_subtract_stack(unsigned long long int * L,
+unsigned long long int R,
+unsigned long long int out,
+int rows, int cols, int csize){
+
+    int d = -1;
+    for(int i = 0; i < rows * cols * d; i++){
+
+        if (i % rows * cols == 0)
+            d+=1;
+
+        if (i % cols > cols - 1 - d){
+            
+
+        }
+    }
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
