@@ -111,7 +111,7 @@ class TestShiftAndStack(unittest.TestCase):
         stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
         window_size=3, resize=(640,480))
 
-        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
+        params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":False}
         stereo.set_params(params)
         stereo.params['ndisp'] = 50
         t1 = time()
@@ -126,27 +126,36 @@ class TestShiftAndStack(unittest.TestCase):
             D = range(int(stereo.params['ndisp']))
         else:
             D = reversed(range(int(-stereo.params['ndisp']), 1))
+        t1 = time()
+        #print(list(D))
         cost_images = stereo.compute_disparity_img(cim1, cim2, D)
+        print(f"python shift and stack time {time() - t1}")
         #cost_images = np.float32(cost_images)
 
         lib = ctypes.cdll.LoadLibrary("../lib/sgbm_helper.so")
-        census = lib.census_transform
-        census.restype = None
-        census.argtypes = [ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
+        sss = lib.shift_subtract_stack
+        sss.restype = None
+        sss.argtypes = [ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
                             ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
-                            ctl.ndpointer(np.uint64, flags = 'aligned, c_contiguous'),
+                            ctl.ndpointer(np.float64, flags = 'aligned, c_contiguous'),
                             ctypes.c_int,
                             ctypes.c_int,
                             ctypes.c_int]
-        
-        census2 = np.zeros(cost_images.shape, dtype = np.uint64)
+        cost_images = cost_images.transpose((2,0,1))
+        cost_im_2 = np.zeros(cost_images.shape, dtype = np.float64)
+        cost_im_2 = np.ascontiguousarray(cost_im_2, dtype = np.float64)
         t1 = time()
-        census(cim1.copy(),
+        
+
+        sss(cim1.copy(),
         cim2.copy(),
-        census2,
-        testim.shape[0],
-        testim.shape[1],
-        1)
+        cost_im_2,
+        cim1.shape[0],
+        cim1.shape[1],
+        cost_images.shape[0])
+        print(f"c++ shift and stack time {time() - t1}")
+        self.assertTrue(np.all(np.isclose(cost_images, cost_im_2)))
+
 
 
 
