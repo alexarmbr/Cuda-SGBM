@@ -1,5 +1,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include "lib/sgbm_helper.hpp"
 #include <iostream>
 #include <chrono>
@@ -23,6 +24,7 @@ int main( int argc, char** argv )
     Mat im2;
     im1 = imread(argv[1], IMREAD_GRAYSCALE);
     im2 = imread(argv[2], IMREAD_GRAYSCALE);
+    cv::resize(im1, im1, Size(480,480));
 
     if(! im1.data | ! im2.data )
     {
