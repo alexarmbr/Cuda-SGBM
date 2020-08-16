@@ -5,6 +5,7 @@
 #include <iostream>
 #include <chrono>
 
+#define D 51
 
 // pkg-config --cflags opencv4 --libs
 
@@ -24,7 +25,8 @@ int main( int argc, char** argv )
     Mat im2;
     im1 = imread(argv[1], IMREAD_GRAYSCALE);
     im2 = imread(argv[2], IMREAD_GRAYSCALE);
-    cv::resize(im1, im1, Size(480,480));
+    resize(im1, im1, Size(480,480));
+    resize(im2, im2, Size(480,480));
 
     if(! im1.data | ! im2.data )
     {
@@ -44,12 +46,20 @@ int main( int argc, char** argv )
     //}
 
     unsigned long long int * cim1;
+    unsigned long long int * cim2;
+    float * shifted_images;
     cim1 = new unsigned long long int [nCols * nRows];
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    cim2 = new unsigned long long int [nCols * nRows];
+    shifted_images = new float [nCols * nRows * D];
+    //std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     census_transform_mat(&im1, cim1, nRows, nCols, 7);
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    census_transform_mat(&im2, cim2, nRows, nCols, 7);
+    shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols, D);
+    
+
+    //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     // TODO: which is this much slower that previous implementation
-    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+    //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
 
 

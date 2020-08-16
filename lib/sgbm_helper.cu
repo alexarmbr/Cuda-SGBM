@@ -1,5 +1,6 @@
 //#define DEPTH 2
 #include <stdio.h>
+#include <cuda_runtime.h>
 // __global__ void multiply_them(float *dest, float *a, float *b)
 // {
 //   const int i = threadIdx.x;

@@ -47,10 +47,10 @@ int rows, int cols, int csize)
     }
 }
 
-inline unsigned long long int hamming_dist(unsigned long long a,
+inline float hamming_dist(unsigned long long a,
 unsigned long long b){
     unsigned long long c = a^b;
-    double z = 0;
+    float z = 0;
     while (c != 0){
         z += c & 1;
         c>>=1;
@@ -62,7 +62,7 @@ unsigned long long b){
 
 extern "C" void shift_subtract_stack(unsigned long long int * L,
 unsigned long long int * R,
-double * out,
+float * out,
 int rows, int cols, int D){
 
     int d = -1;
