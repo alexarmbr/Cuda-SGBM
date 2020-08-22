@@ -489,19 +489,50 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
     }
 
 
-    void r_aggregate(int nCols, int nRows, float * shifted_images){
-      // do dp and cost_image need another level of indirection?
-      float* gpu_ptr_shifted_im;
-      cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D);
-      cudaMemcpy(gpu_ptr_shifted_im, shifted_images, sizeof(float) * nCols * nRows * D, cudaMemcpyHostToDevice);
-      
-      float* gpu_ptr_agg_im;
-      cudaMalloc((void **) &gpu_ptr_agg_im, sizeof(float) * nCols * nRows * D);
-      cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D);
-      __r_aggregate<<<1, 256>>>(gpu_ptr_agg_im, gpu_ptr_shifted_im, nRows, nCols);
 
+  // wrappers
+
+
+  float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+      int nblock = nRows / SHMEM_SIZE;
+      dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
+      dim3 gridSize = dim3(1, nblock);
+      __r_aggregate<<<blockSize, gridSize>>>(dp, shifted_images, nRows, nCols);
+      return dp;
     }
 
-
+  
+  float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+    int nblock = nRows / SHMEM_SIZE;
+    dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
+    dim3 gridSize = dim3(1, nblock);
+    __l_aggregate<<<blockSize, gridSize>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
+  
+  float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp){
+    __vertical_aggregate_down<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
+  float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp){
+    __vertical_aggregate_up<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
+  float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+    __diagonal_tl_br_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
+  float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+    __diagonal_tr_bl_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
+  float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+    __diagonal_br_tl_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
+  float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+    __diagonal_bl_tr_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+    return dp;
+  }
 
 

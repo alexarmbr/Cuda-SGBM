@@ -64,14 +64,22 @@ int main( int argc, char** argv )
     //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
     // cudaMalloc modifies this pointer to point to block of memory on device
+    float* gpu_ptr_shifted_im;
+    cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D);
+    cudaMemcpy(gpu_ptr_shifted_im, shifted_images, sizeof(float) * nCols * nRows * D, cudaMemcpyHostToDevice);
+      
+    float* gpu_ptr_agg_im;
+    cudaMalloc((void **) &gpu_ptr_agg_im, sizeof(float) * nCols * nRows * D);
+    cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D);
 
-    r_aggregate(nCols, nRows, shifted_images);
-   
+    gpu_ptr_agg_im = r_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = l_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = vertical_aggregate_down(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = vertical_aggregate_up(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_tl_br_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_tr_bl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_br_tl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_bl_tr_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
 
-    //namedWindow( "Display window", WINDOW_AUTOSIZE );
-    //imshow( "Display window", im1 );
-    //namedWindow( "Display window2", WINDOW_AUTOSIZE );
-    //imshow( "Display window2", im2 );
-    //waitKey(0);
     return 0;
 }
