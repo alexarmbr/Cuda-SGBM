@@ -2,6 +2,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "lib/sgbm_helper.hpp"
+//#include "cuda_runtime.h"
+#include "lib/sgbm_helper.cuh"
 #include <iostream>
 #include <chrono>
 
@@ -61,7 +63,10 @@ int main( int argc, char** argv )
     // TODO: which is this much slower that previous implementation
     //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
+    // cudaMalloc modifies this pointer to point to block of memory on device
 
+    r_aggregate(nCols, nRows, shifted_images);
+   
 
     //namedWindow( "Display window", WINDOW_AUTOSIZE );
     //imshow( "Display window", im1 );

@@ -1,6 +1,7 @@
 //#define DEPTH 2
 #include <stdio.h>
 #include <cuda_runtime.h>
+#include "sgbm_helper.cuh"
 // __global__ void multiply_them(float *dest, float *a, float *b)
 // {
 //   const int i = threadIdx.x;
@@ -52,7 +53,7 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
 
 // TODO, what if m % SHMEM_SIZE != 0 ?
 // right aggregation
-__global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
+__global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
 {
   int row = threadIdx.y + blockIdx.y * blockDim.y;
   int col = threadIdx.x;
@@ -115,7 +116,7 @@ __global__ void r_aggregate(float *dp, float *cost_image, int m, int n)
 }
 
 // left aggregation
-__global__ void l_aggregate(float *dp, float *cost_image, int m, int n)
+__global__ void __l_aggregate(float *dp, float *cost_image, int m, int n)
 {
   int row = threadIdx.y + blockIdx.y * blockDim.y;
   int col = n - 1 - threadIdx.x;
@@ -178,7 +179,7 @@ __global__ void l_aggregate(float *dp, float *cost_image, int m, int n)
 }
 
 // downward aggregation
-__global__ void vertical_aggregate_down(float *dp, float *cost_image, 
+__global__ void __vertical_aggregate_down(float *dp, float *cost_image, 
   int m, int n)
   {
     // which column of array to work on
@@ -226,7 +227,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
   }
 
 // upward aggreagtion
-  __global__ void vertical_aggregate_up(float *dp, float *cost_image, 
+  __global__ void __vertical_aggregate_up(float *dp, float *cost_image, 
     int m, int n)
     {
       // which column of array to work on
@@ -275,7 +276,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
 
 
   // aggregation along diagonal from top left to bottom right
-  __global__ void diagonal_tl_br_aggregate(float *dp, float *cost_image, 
+  __global__ void __diagonal_tl_br_aggregate(float *dp, float *cost_image, 
     int m, int n)
     {
       // which column of array to work on
@@ -326,7 +327,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
     }
 
 // aggregation along diagonal from top right to bottom left
-    __global__ void diagonal_tr_bl_aggregate(float *dp, float *cost_image, 
+    __global__ void __diagonal_tr_bl_aggregate(float *dp, float *cost_image, 
       int m, int n)
       {
         // which column of array to work on
@@ -381,7 +382,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
 
 
 // aggregation along diagonal from bottom right to top left
-    __global__ void diagonal_br_tl_aggregate(float *dp, float *cost_image, 
+    __global__ void __diagonal_br_tl_aggregate(float *dp, float *cost_image, 
       int m, int n)
       {
         // which column of array to work on
@@ -437,7 +438,7 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
 
 
   // aggregation along diagonal from top left to bottom right
-  __global__ void diagonal_bl_tr_aggregate(float *dp, float *cost_image, 
+  __global__ void __diagonal_bl_tr_aggregate(float *dp, float *cost_image, 
     int m, int n)
     {
       // which column of array to work on
@@ -485,6 +486,20 @@ __global__ void vertical_aggregate_down(float *dp, float *cost_image,
         }
       start_col += blockDim.x;
       }
+    }
+
+
+    void r_aggregate(int nCols, int nRows, float * shifted_images){
+      // do dp and cost_image need another level of indirection?
+      float* gpu_ptr_shifted_im;
+      cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D);
+      cudaMemcpy(gpu_ptr_shifted_im, shifted_images, sizeof(float) * nCols * nRows * D, cudaMemcpyHostToDevice);
+      
+      float* gpu_ptr_agg_im;
+      cudaMalloc((void **) &gpu_ptr_agg_im, sizeof(float) * nCols * nRows * D);
+      cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D);
+      __r_aggregate<<<1, 256>>>(gpu_ptr_agg_im, gpu_ptr_shifted_im, nRows, nCols);
+
     }
 
 
