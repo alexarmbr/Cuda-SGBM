@@ -489,6 +489,44 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
     }
 
 
+// takes min along depth dimension, puts output in dp
+__global__ void __min_3d_mat(float *dp, float *cost_image, 
+  int m, int n)
+  {
+    int col = blockDim.x * blockIdx.x + threadIdx.x;
+    
+    int K = ceilf(n / (blockDim.x * gridDim.x));
+    int D_SIZE = floorf(D / D_STEP); 
+    float arr[ARR_SIZE];
+  
+    while(col < n)
+    {
+      for (int row = 0; row < m; row++)
+      {
+        int arr_ind = 0;
+        
+        //#pragma unroll
+        for (int depth = 0; depth < D; depth+=D_STEP){
+          arr[arr_ind] = cost_image[depth * m * n + row * n + col];
+          arr_ind++;
+        }
+        dp[row * n + col] = arr_min(arr, D_SIZE);
+      }
+    col += blockDim.x;
+    }
+  
+  }
+
+
+
+
+
+
+
+
+
+
+
 
   // wrappers
 
