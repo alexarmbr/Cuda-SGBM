@@ -47,10 +47,6 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
   }
 
 
-
-
-
-
 // TODO, what if m % SHMEM_SIZE != 0 ?
 // right aggregation
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
@@ -489,32 +485,46 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
     }
 
 
-// takes min along depth dimension, puts output in dp
-__global__ void __min_3d_mat(float *dp, float *cost_image, 
+__device__ int argmin(float * arr, int dsize)
+{
+  float current_min = 10000000;
+  int min_index;
+
+  for(int i = 0; i < dsize; i++)
+    a = fminf(arr[i], a);
+  return a;
+}
+
+
+// takes min along depth dimension, puts output back in dp to save memory
+__global__ void argmin_3d_mat(float * dp, float * stereo_im,
   int m, int n)
   {
     int col = blockDim.x * blockIdx.x + threadIdx.x;
-    
-    int K = ceilf(n / (blockDim.x * gridDim.x));
-    int D_SIZE = floorf(D / D_STEP); 
-    float arr[ARR_SIZE];
+    int row = blockDim.y * blockIdx.y + threadIdx.y;
+    int imsize = m*n;
+    int loop_limit = D*m*n;
+    //int K = ceilf(n / (blockDim.x * gridDim.x));
+    //int D_SIZE = floorf(D / D_STEP); 
   
-    while(col < n)
+    for(int col = 0; col < n; col+=blockDim.x)
     {
-      for (int row = 0; row < m; row++)
+      for (int row = 0; row < m; row+=blockDim.y)
       {
-        int arr_ind = 0;
+        int min_ind = -1;
+        float current_min = 1000000
+        int current_row = row * n;
+        int v = 0
         
-        //#pragma unroll
-        for (int depth = 0; depth < D; depth+=D_STEP){
-          arr[arr_ind] = cost_image[depth * m * n + row * n + col];
-          arr_ind++;
+        for (int depth = 0; depth < loop_limit; depth+=imsize){
+          
+          if (cost_image[depth + current_row + col] < current_min)
+            min_ind = v;
+          v++;
         }
-        dp[row * n + col] = arr_min(arr, D_SIZE);
+        stereo_im[row * n + col] = min_ind
       }
-    col += blockDim.x;
     }
-  
   }
 
 

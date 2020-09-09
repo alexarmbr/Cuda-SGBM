@@ -68,14 +68,16 @@ int rows, int cols, int D){
     int d = -1;
     int imsize = rows * cols;
     for(int i = 0; i < imsize * D; i++){
-
+        
+        // compute for next disparity
         if (i % (rows * cols) == 0)
             d+=1;
-            //std::cout << d << "\n";}
-
+        
+        // no corresponding pixels at this disparity
         if (i % cols > cols - 1 - d)
-        //if (i % cols < d)
             out[i] = 1e7;
+        
+        // hamming distance between right image shifted by d and left image
         else
             out[i] = hamming_dist(R[(i % imsize)+d], L[i % imsize]);
     }
