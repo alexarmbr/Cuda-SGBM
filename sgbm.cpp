@@ -53,8 +53,8 @@ int main( int argc, char** argv )
     census_transform_mat(&im1, cim1, nRows, nCols, 7);
     census_transform_mat(&im2, cim2, nRows, nCols, 7);
 
-    // if shifted_images, cim1, cim2 were numpy arrays this would compute with dimensions row, col, disparity
-    // shifted_images[i,j,D] = cim1[i,j+D] - cim2[i,j]
+    // if shifted_images, cim1, cim2 were numpy arrays with dimensions disparity (D), row, col
+    // shifted_images[D,i,j] = cim1[i,j+D] - cim2[i,j]
     // with padding where necessary
     shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols, D);
     
@@ -84,14 +84,13 @@ int main( int argc, char** argv )
     gpu_ptr_agg_im = diagonal_bl_tr_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
 
     // argmin
-    float * stereo_im;
-    cudaMalloc((void **) &stereo_im, sizeof(float) * nCols * nRows);
-    cudaMemset(stereo_im, 0, sizeof(float) * nCols * nRows);
-    //argmin_3d_mat()
+    int * stereo_im;
+    cudaMalloc((void **) &stereo_im, sizeof(int) * nCols * nRows);
+    cudaMemset(stereo_im, 0, sizeof(int) * nCols * nRows);
+    argmin(nCols, nRows, gpu_ptr_agg_im, stereo_im);
 
-
-
-
+    // TODO:
+    // normalize using cuBLAS
 
     return 0;
 }

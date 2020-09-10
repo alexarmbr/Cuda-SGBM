@@ -898,7 +898,6 @@ class TestArgmin(unittest.TestCase):
         out = np.ascontiguousarray(out, dtype = np.int32)
         gpu_argmin(drv.In(arr),drv.Out(out),
         np.int32(rows), np.int32(cols), block = (16,16,1), grid = (1,1))
-        #pdb.set_trace()
         self.assertTrue(np.all(np.isclose(out, np.int32(np.argmin(arr, axis=0)))))
 
 

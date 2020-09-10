@@ -4,24 +4,6 @@
 //#include "sgbm_helper.cuh"
 
 
-// __global__ void multiply_them(float *dest, float *a, float *b)
-// {
-//   const int i = threadIdx.x;
-//   int arr[10];
-//   //arr[i] = 20;
-//   dest[i] = a[i] * b[i] + arr[i];
-// }
-
-// __global__ void three_d_matrix_test(float *dest, int stride_depth, int stride_row, int N)
-// {
-//   if(threadIdx.x < my_global_var){
-//   //if((threadIdx.x == threadIdx.y) & (threadIdx.x == threadIdx.z)){
-//     //int idx = (threadIdx.z * stride_depth * stride_row) + (threadIdx.y * stride_row) + threadIdx.x;
-//     int idx = (threadIdx.z * my_global_var * my_global_var) + (threadIdx.y * my_global_var) + threadIdx.x;
-//     dest[idx] = 100.0f;
-
-// }
-// }
 
 // dp - cost aggregation array
 // cost_image - m x n x D array
@@ -487,15 +469,6 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
     }
 
 
-// __device__ int argmin(float * arr, int dsize)
-// {
-//   float current_min = 10000000;
-//   int min_index;
-
-//   for(int i = 0; i < dsize; i++)
-//     a = fminf(arr[i], a);
-//   return a;
-// }
 
 
 // takes min along depth dimension, puts output back in dp to save memory
@@ -534,16 +507,17 @@ __global__ void argmin_3d_mat(float * dp, int * stereo_im,
 
 
 
-
-
-
-
-
-
-
-
-
   // wrappers
+int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
+  dim3 blockSize(SHMEM_SIZE, SHMEM_SIZE, 1);
+  dim3 gridSize(1, 1);
+  argmin_3d_mat<<<blockSize, gridSize>>>(dp, stereo_im, nRows, nCols);
+  return stereo_im;
+}
+
+
+
+
 
   float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
       int nblock = nRows / SHMEM_SIZE;

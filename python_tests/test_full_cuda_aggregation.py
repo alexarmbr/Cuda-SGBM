@@ -70,19 +70,15 @@ if __name__ == "__main__":
     }
     build_options = [format_compiler_constants(compiler_constants)]
     mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
-    aggregations = ['r_aggregate', 'l_aggregate',
-                    'vertical_aggregate_down', 'vertical_aggregate_up',
-                    'diagonal_tl_br_aggregate', 'diagonal_tr_bl_aggregate',
-                    'diagonal_br_tl_aggregate', 'diagonal_bl_tr_aggregate']
 
-    r_aggregate = mod.get_function('r_aggregate')
-    vertical_aggregate_down = mod.get_function('vertical_aggregate_down')
-    vertical_aggregate_up = mod.get_function('vertical_aggregate_up')
-    diagonal_br_tl_aggregate = mod.get_function('diagonal_br_tl_aggregate')
-    diagonal_tl_br_aggregate = mod.get_function('diagonal_tl_br_aggregate')
-    diagonal_tr_bl_aggregate = mod.get_function('diagonal_tr_bl_aggregate')
-    diagonal_bl_tr_aggregate = mod.get_function('diagonal_bl_tr_aggregate')
-    l_aggregate = mod.get_function('l_aggregate')
+    r_aggregate = mod.get_function('__r_aggregate')
+    vertical_aggregate_down = mod.get_function('__vertical_aggregate_down')
+    vertical_aggregate_up = mod.get_function('__vertical_aggregate_up')
+    diagonal_br_tl_aggregate = mod.get_function('__diagonal_br_tl_aggregate')
+    diagonal_tl_br_aggregate = mod.get_function('__diagonal_tl_br_aggregate')
+    diagonal_tr_bl_aggregate = mod.get_function('__diagonal_tr_bl_aggregate')
+    diagonal_bl_tr_aggregate = mod.get_function('__diagonal_bl_tr_aggregate')
+    l_aggregate = mod.get_function('__l_aggregate')
 
     t1 = time()
     cost_images_ptr = drv.to_device(cost_images)
@@ -116,7 +112,7 @@ if __name__ == "__main__":
     gt += 1
     im = stereo.compute_depth(np.int32(min_cost_im))
     gt_im = stereo.compute_depth(np.int32(gt))
-    im = stereo.normalize(im, 0.1)
-    gt_im = stereo.normalize(gt_im, 0.1)
+    ##im = stereo.normalize(im, 0.1)
+    ##gt_im = stereo.normalize(gt_im, 0.1)
     np.save("../out_images/testim.npy", im)
     np.save("../out_images/gtim.npy", im)
