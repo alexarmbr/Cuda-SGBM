@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 from time import time
 import os
 import pdb
-#import pycuda.autoinit
-#import pycuda.driver as drv
+import pycuda.autoinit
+import pycuda.driver as drv
 import numpy as np
-#from pycuda.compiler import SourceModule
+from pycuda.compiler import SourceModule
 import math
 from time import time
 IMAGE_DIR = "Backpack-perfect"
@@ -875,8 +875,11 @@ class TestArgmin(unittest.TestCase):
 
     def test_argmin(self):
         rows = 420
-        cols = 420
-        arr = np.random.uniform(size = (rows, cols, D))
+        cols = 421
+        d = 52
+        d_step = 1
+        arr = np.float32(np.random.uniform(size = (d, rows, cols)))
+        arr = np.ascontiguousarray(arr, dtype = np.float32)
 
         compiler_constants = {
             'D_STEP':d_step,
@@ -891,10 +894,12 @@ class TestArgmin(unittest.TestCase):
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
 
         gpu_argmin = mod.get_function("argmin_3d_mat")
-        out = np.zeros((rows, cols), dtype=np.float32)
-        min_3d_mat(drv.Out(out), drv.In(arr),
-        np.int32(rows), np.int32(cols), block = (16,16,1), grid = (2,1))
-        self.assertTrue(np.all(np.isclose(out, cost_images[arr_slice,:,:])))
+        out = np.zeros((rows, cols), dtype=np.int32)
+        out = np.ascontiguousarray(out, dtype = np.int32)
+        gpu_argmin(drv.In(arr),drv.Out(out),
+        np.int32(rows), np.int32(cols), block = (16,16,1), grid = (1,1))
+        #pdb.set_trace()
+        self.assertTrue(np.all(np.isclose(out, np.int32(np.argmin(arr, axis=0)))))
 
 
 

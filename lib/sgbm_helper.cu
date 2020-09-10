@@ -1,7 +1,9 @@
 //#define DEPTH 2
 #include <stdio.h>
 #include <cuda_runtime.h>
-#include "sgbm_helper.cuh"
+//#include "sgbm_helper.cuh"
+
+
 // __global__ void multiply_them(float *dest, float *a, float *b)
 // {
 //   const int i = threadIdx.x;
@@ -485,45 +487,48 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
     }
 
 
-__device__ int argmin(float * arr, int dsize)
-{
-  float current_min = 10000000;
-  int min_index;
+// __device__ int argmin(float * arr, int dsize)
+// {
+//   float current_min = 10000000;
+//   int min_index;
 
-  for(int i = 0; i < dsize; i++)
-    a = fminf(arr[i], a);
-  return a;
-}
+//   for(int i = 0; i < dsize; i++)
+//     a = fminf(arr[i], a);
+//   return a;
+// }
 
 
 // takes min along depth dimension, puts output back in dp to save memory
-__global__ void argmin_3d_mat(float * dp, float * stereo_im,
+__global__ void argmin_3d_mat(float * dp, int * stereo_im,
   int m, int n)
   {
     int col = blockDim.x * blockIdx.x + threadIdx.x;
-    int row = blockDim.y * blockIdx.y + threadIdx.y;
     int imsize = m*n;
     int loop_limit = D*m*n;
-    //int K = ceilf(n / (blockDim.x * gridDim.x));
-    //int D_SIZE = floorf(D / D_STEP); 
   
-    for(int col = 0; col < n; col+=blockDim.x)
+    while(col < n)
     {
-      for (int row = 0; row < m; row+=blockDim.y)
+      int row = blockDim.y * blockIdx.y + threadIdx.y;
+      while(row < m)
       {
         int min_ind = -1;
-        float current_min = 1000000
-        int current_row = row * n;
-        int v = 0
+        float current_min = 100000000.0;
+        int current_val = row * n + col;
+        int v = 0;
         
         for (int depth = 0; depth < loop_limit; depth+=imsize){
           
-          if (cost_image[depth + current_row + col] < current_min)
+          if (dp[depth + current_val] < current_min)
+          {
             min_ind = v;
+            current_min = dp[depth + current_val];
+          }
           v++;
         }
-        stereo_im[row * n + col] = min_ind
+        stereo_im[current_val] = min_ind;
+        row+=blockDim.y;
       }
+      col+=blockDim.x;
     }
   }
 
@@ -539,7 +544,6 @@ __global__ void argmin_3d_mat(float * dp, float * stereo_im,
 
 
   // wrappers
-
 
   float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
       int nblock = nRows / SHMEM_SIZE;
