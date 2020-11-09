@@ -35,6 +35,8 @@ __global__ void __diagonal_br_tl_aggregate(float *dp, float *cost_image, int m, 
 
 __global__ void __diagonal_bl_tr_aggregate(float *dp, float *cost_image, int m, int n);
 
+__global__ void __argmin_3d_mat(float * dp, int * stereo_im, int m, int n);
+
 
 
 
@@ -47,7 +49,7 @@ float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, f
 float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
 float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
 float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-
+int * argmin(int nCols, int nRows, float * dp, int * stereo_im);
 
 
 

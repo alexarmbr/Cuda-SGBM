@@ -223,13 +223,13 @@ class TestAggregation(unittest.TestCase):
 
 
 
-        r_aggregate = mod.get_function("r_aggregate")
+        r_aggregate = mod.get_function("__r_aggregate")
         out = np.zeros_like(L)
         out = np.ascontiguousarray(out, dtype = np.float32)
         vertical_blocks = int(math.ceil(rows/shmem_size))
         t1 = time()
         # pycuda complains when block size is greater than 32 x 32
-        r_aggregate(drv.Out(out), drv.In(cost_images),
+        r_aggregate(drv.InOut(out), drv.In(cost_images),
         np.int32(rows), np.int32(cols), block = (shmem_size,shmem_size,1), grid = (1,vertical_blocks)) 
         print("cuda aggregate cost %f" % (time() - t1))
         drv.stop_profiler()
@@ -893,7 +893,7 @@ class TestArgmin(unittest.TestCase):
         build_options = [format_compiler_constants(compiler_constants)]
         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
 
-        gpu_argmin = mod.get_function("argmin_3d_mat")
+        gpu_argmin = mod.get_function("__argmin_3d_mat")
         out = np.zeros((rows, cols), dtype=np.int32)
         out = np.ascontiguousarray(out, dtype = np.int32)
         gpu_argmin(drv.In(arr),drv.Out(out),

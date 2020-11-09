@@ -5,14 +5,19 @@
 
 
 
-// dp - cost aggregation array
-// cost_image - m x n x D array
-// d - use every d channels of input to conserve register memory
-// m - image rows
-// n - image columns
-// D - depth
-// depth_stride - pitch along depth dimension
-// row_stride - pitch along row dimension
+# define D_STEP 1
+# define D 52
+# define ARR_SIZE 52
+# define P1 5
+# define P2 90000
+# define SHMEM_SIZE 64
+
+// 'D_STEP':d_step,
+// 'D':d,
+// 'ARR_SIZE':math.floor(d/d_step),
+// 'P1':5,
+// 'P2':90000,
+// 'SHMEM_SIZE':64
 
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three){
@@ -35,6 +40,7 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
 // right aggregation
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
 {
+  //printf("hello! \n");
   int row = threadIdx.y + blockIdx.y * blockDim.y;
   int col = threadIdx.x;
   int depth_dim_size = m*n;
@@ -80,6 +86,7 @@ __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
           int ind = agg_row * n + K + 1;
           for (int d = 0; d < D; d+=D_STEP){
             dp[ind] += cost_image[ind] + dp_criteria(dp, ind-1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
+            //printf("ind: %d, %f \n", ind, cost_image[ind]);
             //dp[ind] = cost_image[ind] + dp[ind - 1];
             ind += (depth_dim_size * D_STEP);
           }
@@ -472,7 +479,7 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
 
 
 // takes min along depth dimension, puts output back in dp to save memory
-__global__ void argmin_3d_mat(float * dp, int * stereo_im,
+__global__ void __argmin_3d_mat(float * dp, int * stereo_im,
   int m, int n)
   {
     int col = blockDim.x * blockIdx.x + threadIdx.x;
@@ -509,9 +516,9 @@ __global__ void argmin_3d_mat(float * dp, int * stereo_im,
 
   // wrappers
 int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
-  dim3 blockSize(SHMEM_SIZE, SHMEM_SIZE, 1);
-  dim3 gridSize(1, 1);
-  argmin_3d_mat<<<blockSize, gridSize>>>(dp, stereo_im, nRows, nCols);
+  dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
+  dim3 gridSize = dim3(1, 1);
+  __argmin_3d_mat<<<gridSize, blockSize>>>(dp, stereo_im, nRows, nCols);
   return stereo_im;
 }
 
@@ -521,9 +528,10 @@ int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
 
   float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
       int nblock = nRows / SHMEM_SIZE;
+      printf("calling r aggregate \n");
       dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
       dim3 gridSize = dim3(1, nblock);
-      __r_aggregate<<<blockSize, gridSize>>>(dp, shifted_images, nRows, nCols);
+      __r_aggregate<<<gridSize, blockSize>>>(dp, shifted_images, nRows, nCols);
       return dp;
     }
 
@@ -532,7 +540,7 @@ int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
     int nblock = nRows / SHMEM_SIZE;
     dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
     dim3 gridSize = dim3(1, nblock);
-    __l_aggregate<<<blockSize, gridSize>>>(dp, shifted_images, nRows, nCols);
+    __l_aggregate<<<gridSize, blockSize>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
   

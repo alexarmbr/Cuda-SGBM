@@ -39,11 +39,13 @@ NVCC_FLAGS = -m64 -g -dc -Wno-deprecated-gpu-targets --std=c++11 \
 
 
 sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
-	g++ -o lib/sgbm.so -std=c++11 $(INCLUDE) $^ $(LIBS)
+	g++ -g -o lib/sgbm.so -std=c++11 $(INCLUDE) $^ $(LIBS)
 
 
 %.cu.o: lib/%.cu
-	$(NVCC)  $(NVCC_GENCODES) -c -o $@ $(NVCC_INCLUDE) $<
+	$(NVCC)  $(NVCC_GENCODES) -g -c -o $@ $(NVCC_INCLUDE) $<
 
 cuda.o: sgbm_helper.cu.o
-	$(NVCC) $(CUDA_LINK_FLAGS) $(NVCC_GENCODES) -o $@ $(NVCC_INCLUDE) $^
+	$(NVCC) $(CUDA_LINK_FLAGS) -g $(NVCC_GENCODES) -o $@ $(NVCC_INCLUDE) $^
+clean:
+	rm -f *.o lib/*.so

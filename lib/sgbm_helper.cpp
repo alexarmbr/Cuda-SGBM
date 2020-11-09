@@ -94,7 +94,7 @@ int rows, int cols, int csize)
     // loop over image
     for(int i = csize; i < rows-csize; i++){
         for(int j = csize; j < cols-csize; j++){
-            uint8_t mid = (*in_arr).at<uint8_t>(i,j);
+            unsigned char mid = (unsigned char) (*in_arr).at<uint8_t>(i,j);
             unsigned long long census_val = 0;
             //std::cout << i << "\n";
             // loop over census region

@@ -2,7 +2,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "lib/sgbm_helper.hpp"
-//#include "cuda_runtime.h"
+
 #include "lib/sgbm_helper.cuh"
 #include <iostream>
 #include <chrono>
@@ -50,8 +50,8 @@ int main( int argc, char** argv )
     shifted_images = new float [nCols * nRows * D];
     
     // census transform both images
-    census_transform_mat(&im1, cim1, nRows, nCols, 7);
-    census_transform_mat(&im2, cim2, nRows, nCols, 7);
+    census_transform_mat(&im1, cim1, nRows, nCols, 3);
+    census_transform_mat(&im2, cim2, nRows, nCols, 3);
 
     // if shifted_images, cim1, cim2 were numpy arrays with dimensions disparity (D), row, col
     // shifted_images[D,i,j] = cim1[i,j+D] - cim2[i,j]
@@ -74,6 +74,11 @@ int main( int argc, char** argv )
     cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D);
 
     // each direction of aggregation
+
+    // TODO: data is going into gpu, but not coming out (i.e. gdb shows that shifted_images is nonzero)
+    // but everything comes out as zero. cuda-gdb is saying there are no active kernels when breakpoints
+    // are hit inside the aggregation functions. alks;dfjakl;sdfj fuck
+    // something screwy with the way the kernel is being launched, because all functions pass python tests for correctness
     gpu_ptr_agg_im = r_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = l_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = vertical_aggregate_down(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
@@ -82,15 +87,24 @@ int main( int argc, char** argv )
     gpu_ptr_agg_im = diagonal_tr_bl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = diagonal_br_tl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = diagonal_bl_tr_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    float * agg_im = new float[nCols * nRows * D];
+    cudaMemcpy(agg_im, gpu_ptr_agg_im, sizeof(float) * D * nCols * nRows, cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+
+
 
     // argmin
     int * stereo_im;
     cudaMalloc((void **) &stereo_im, sizeof(int) * nCols * nRows);
     cudaMemset(stereo_im, 0, sizeof(int) * nCols * nRows);
     argmin(nCols, nRows, gpu_ptr_agg_im, stereo_im);
+    int * stereo_im_host = new int[nCols * nRows];
+    cudaMemcpy(stereo_im_host, stereo_im, sizeof(int) * nCols * nRows, cudaMemcpyDeviceToHost);
 
-    // TODO:
-    // normalize using cuBLAS
+
+    FILE *f = fopen("stereo_im.data", "wb");
+    fwrite(stereo_im_host, sizeof(int), nCols * nRows, f);
+    fclose(f);
 
     return 0;
 }
