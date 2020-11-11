@@ -11,6 +11,17 @@
 
 // pkg-config --cflags opencv4 --libs
 
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
+
 
 using namespace cv;
 using namespace std;
@@ -65,13 +76,13 @@ int main( int argc, char** argv )
 
     // cudaMalloc modifies this pointer to point to block of memory on device
     float* gpu_ptr_shifted_im;
-    cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D);
-    cudaMemcpy(gpu_ptr_shifted_im, shifted_images, sizeof(float) * nCols * nRows * D, cudaMemcpyHostToDevice);
+    gpuErrchk( cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D) );
+    gpuErrchk( cudaMemcpy(gpu_ptr_shifted_im, shifted_images, sizeof(float) * nCols * nRows * D, cudaMemcpyHostToDevice) );
       
     // aggregated image will go here
     float* gpu_ptr_agg_im;
-    cudaMalloc((void **) &gpu_ptr_agg_im, sizeof(float) * nCols * nRows * D);
-    cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D);
+    gpuErrchk( cudaMalloc((void **) &gpu_ptr_agg_im, sizeof(float) * nCols * nRows * D) );
+    gpuErrchk( cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D) );
 
     // each direction of aggregation
 
@@ -88,7 +99,8 @@ int main( int argc, char** argv )
     gpu_ptr_agg_im = diagonal_br_tl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = diagonal_bl_tr_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     float * agg_im = new float[nCols * nRows * D];
-    cudaMemcpy(agg_im, gpu_ptr_agg_im, sizeof(float) * D * nCols * nRows, cudaMemcpyDeviceToHost);
+    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchk( cudaMemcpy(agg_im, gpu_ptr_agg_im, sizeof(float) * D * nCols * nRows, cudaMemcpyDeviceToHost) );
     cudaDeviceSynchronize();
 
 

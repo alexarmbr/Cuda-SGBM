@@ -3,7 +3,7 @@
 #ifndef SGBM_DEVICE
 #define SGBM_DEVICE
 
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
 
 #define D_STEP 1
 #define D 51
@@ -11,7 +11,6 @@
 #define P1 5
 #define P2 90000
 #define SHMEM_SIZE 16
-
 
 
 

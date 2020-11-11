@@ -5,6 +5,7 @@ using namespace cv;
 
 
 
+
 extern "C" void test_sum(const uint8_t * in_arr,
 unsigned long long int * out_arr,
 int rows, int cols);

@@ -1,23 +1,18 @@
 //#define DEPTH 2
 #include <stdio.h>
-#include <cuda_runtime.h>
-//#include "sgbm_helper.cuh"
+//#include <cuda_runtime.h>
+#include "sgbm_helper.cuh"
 
 
 
-# define D_STEP 1
-# define D 52
-# define ARR_SIZE 52
-# define P1 5
-# define P2 90000
-# define SHMEM_SIZE 64
+// # define D_STEP 1
+// # define D 52
+// # define ARR_SIZE 52
+// # define P1 5
+// # define P2 90000
+// # define SHMEM_SIZE 64
 
-// 'D_STEP':d_step,
-// 'D':d,
-// 'ARR_SIZE':math.floor(d/d_step),
-// 'P1':5,
-// 'P2':90000,
-// 'SHMEM_SIZE':64
+
 
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three){

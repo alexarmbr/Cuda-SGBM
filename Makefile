@@ -7,7 +7,7 @@
 
 
 
-CUDA_PATH = /usr/local/cuda
+CUDA_PATH = /usr/local/cuda-8.0
 CUDA_INC_PATH = $(CUDA_PATH)/include
 CUDA_BIN_PATH = $(CUDA_PATH)/bin
 CUDA_LIB_PATH = $(CUDA_PATH)/lib64
@@ -43,9 +43,9 @@ sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
 
 
 %.cu.o: lib/%.cu
-	$(NVCC)  $(NVCC_GENCODES) -g -c -o $@ $(NVCC_INCLUDE) $<
+	$(NVCC)  $(NVCC_GENCODES) -g -G -c -o $@ $(NVCC_INCLUDE) $<
 
 cuda.o: sgbm_helper.cu.o
-	$(NVCC) $(CUDA_LINK_FLAGS) -g $(NVCC_GENCODES) -o $@ $(NVCC_INCLUDE) $^
+	$(NVCC) $(CUDA_LINK_FLAGS) $(NVCC_GENCODES) -o $@ $(NVCC_INCLUDE) $^
 clean:
 	rm -f *.o lib/*.so
