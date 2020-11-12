@@ -7,7 +7,7 @@
 
 
 
-CUDA_PATH = /usr/local/cuda-8.0
+CUDA_PATH = /usr/local/cuda
 CUDA_INC_PATH = $(CUDA_PATH)/include
 CUDA_BIN_PATH = $(CUDA_PATH)/bin
 CUDA_LIB_PATH = $(CUDA_PATH)/lib64

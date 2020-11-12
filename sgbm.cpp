@@ -7,8 +7,6 @@
 #include <iostream>
 #include <chrono>
 
-#define D 51
-
 // pkg-config --cflags opencv4 --libs
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -69,10 +67,8 @@ int main( int argc, char** argv )
     // with padding where necessary
     shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols, D);
     
-
-    //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
-
+    // TODO: there is a bug which is causing blurry stereo images somewhere after here, 
+    // census transform and shift subtract stack have been manually verified
 
     // cudaMalloc modifies this pointer to point to block of memory on device
     float* gpu_ptr_shifted_im;
@@ -85,11 +81,6 @@ int main( int argc, char** argv )
     gpuErrchk( cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D) );
 
     // each direction of aggregation
-
-    // TODO: data is going into gpu, but not coming out (i.e. gdb shows that shifted_images is nonzero)
-    // but everything comes out as zero. cuda-gdb is saying there are no active kernels when breakpoints
-    // are hit inside the aggregation functions. alks;dfjakl;sdfj fuck
-    // something screwy with the way the kernel is being launched, because all functions pass python tests for correctness
     gpu_ptr_agg_im = r_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = l_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = vertical_aggregate_down(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
@@ -98,17 +89,15 @@ int main( int argc, char** argv )
     gpu_ptr_agg_im = diagonal_tr_bl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = diagonal_br_tl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
     gpu_ptr_agg_im = diagonal_bl_tr_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
-    float * agg_im = new float[nCols * nRows * D];
     gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaMemcpy(agg_im, gpu_ptr_agg_im, sizeof(float) * D * nCols * nRows, cudaMemcpyDeviceToHost) );
-    cudaDeviceSynchronize();
+    gpuErrchk( cudaDeviceSynchronize() );
 
 
 
     // argmin
     int * stereo_im;
-    cudaMalloc((void **) &stereo_im, sizeof(int) * nCols * nRows);
-    cudaMemset(stereo_im, 0, sizeof(int) * nCols * nRows);
+    gpuErrchk( cudaMalloc((void **) &stereo_im, sizeof(int) * nCols * nRows) );
+    gpuErrchk( cudaMemset(stereo_im, 0, sizeof(int) * nCols * nRows) );
     argmin(nCols, nRows, gpu_ptr_agg_im, stereo_im);
     int * stereo_im_host = new int[nCols * nRows];
     cudaMemcpy(stereo_im_host, stereo_im, sizeof(int) * nCols * nRows, cudaMemcpyDeviceToHost);

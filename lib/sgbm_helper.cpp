@@ -43,7 +43,6 @@ int rows, int cols, int csize)
             }
             out_arr[i * cols + j] = census_val;
         }
-
     }
 }
 
@@ -98,18 +97,20 @@ int rows, int cols, int csize)
             unsigned long long census_val = 0;
             //std::cout << i << "\n";
             // loop over census region
+            unsigned long long tmp;
             for(int u = -1 * csize; u <= csize; u++){
                 for(int v = -1 * csize; v<=csize; v++){
 
                     if (!((u==0) && (v==0)))
                     {
                         census_val <<= (unsigned long long) 1;
-                        census_val |= (unsigned long long) ((*in_arr).data[((i+u) * cols) + j + v] >= mid);
+                        tmp = (unsigned long long) ((*in_arr).at<uint8_t>(i+u,j+v) >= mid);
+                        census_val |= tmp;
+                        //census_val |= (unsigned long long) ((*in_arr).data[((i+u) * cols) + j + v] >= mid);
                     }
                 }
             }
             out_arr[i * cols + j] = census_val;
         }
-
     }
 }
