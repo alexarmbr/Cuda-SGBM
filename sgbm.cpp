@@ -34,8 +34,8 @@ int main( int argc, char** argv )
 
     Mat im1;
     Mat im2;
-    im1 = imread(argv[1], IMREAD_GRAYSCALE);
-    im2 = imread(argv[2], IMREAD_GRAYSCALE);
+    im1 = imread(argv[2], IMREAD_GRAYSCALE);
+    im2 = imread(argv[1], IMREAD_GRAYSCALE);
     resize(im1, im1, Size(480,480));
     resize(im2, im2, Size(480,480));
 
@@ -67,9 +67,6 @@ int main( int argc, char** argv )
     // with padding where necessary
     shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols, D);
     
-    // TODO: there is a bug which is causing blurry stereo images somewhere after here, 
-    // census transform and shift subtract stack have been manually verified
-
     // cudaMalloc modifies this pointer to point to block of memory on device
     float* gpu_ptr_shifted_im;
     gpuErrchk( cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D) );
