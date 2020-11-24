@@ -10,7 +10,7 @@ The cuda kernels are defined in `lib/cuda_helper.cu`, there is one for each dire
 
 The image in binary format will be written to `stereo_im.data`. The units of the image are raw disparity values because it has not been scaled by focal length and baseline distance. For sample data run `setup.sh` to download a pair of stereo images from Middlebury dataset.
 
-
+If you are able to make it faster please submit a pull request!
 
 ![](im0.png)
 ![](im1.png)
