@@ -900,50 +900,6 @@ class TestArgmin(unittest.TestCase):
         np.int32(rows), np.int32(cols), block = (16,16,1), grid = (1,1))
         self.assertTrue(np.all(np.isclose(out, np.int32(np.argmin(arr, axis=0)))))
 
-
-
-#     def test_min(self):
-#         IMAGE_DIR = "Backpack-perfect"
-#         im1 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im1.png"))
-#         im2 = cv2.imread(os.path.join("../data", IMAGE_DIR ,"im0.png"))
-
-#         stereo = SemiGlobalMatching(im1, im2, os.path.join("../data", IMAGE_DIR ,"calib.txt"),
-#         window_size=3, resize=(640,480))
-
-#         params = {"p1":5, "p2":90000, "census_kernel_size":7, "reversed":True}
-#         stereo.set_params(params)
-#         stereo.params['ndisp'] = 50
-
-#         cim1 = stereo.census_transform(stereo.im1)
-#         cim2 = stereo.census_transform(stereo.im2)
-#         if not stereo.reversed:
-#             D = range(int(stereo.params['ndisp']))
-#         else:
-#             D = reversed(range(int(-stereo.params['ndisp']), 1))
-#         cost_images = stereo.compute_disparity_img(cim1, cim2, D)
-#         cost_images = cost_images.transpose((2,0,1))
-#         cost_images = np.ascontiguousarray(cost_images, dtype = np.float32)
-
-#         d, rows, cols = cost_images.shape
-#         d_step = 2
-
-#         compiler_constants = {
-#             'D_STEP':2,
-#             'D':d,
-#             'ARR_SIZE':math.floor(d/d_step),
-#             'P1':5,
-#             'P2':90000
-#         }
-#         build_options = [format_compiler_constants(compiler_constants)]
-#         mod = SourceModule(open("../lib/sgbm_helper.cu").read(), options=build_options)
-#         min_3d_mat = mod.get_function("min_3d_mat")
-#         out = np.zeros((rows, cols), dtype = np.float32)
-#         min_3d_mat(drv.Out(out), drv.In(cost_images),
-#         np.int32(rows), np.int32(cols), block = (256,1,1), grid = (2,1))
-#         self.assertTrue(np.all(np.isclose(out, np.min(cost_images[::d_step, :, :], axis=0))))
-
-        
-
         
 
 

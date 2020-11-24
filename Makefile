@@ -1,10 +1,4 @@
 
-#helper: lib/sgbm_helper.cpp
-#	gcc -lstdc++ -shared -o lib/sgbm_helper.so lib/sgbm_helper.cpp
-
-#tests: lib/tests.cpp
-#	g++ lib/tests.cpp -o lib/tests.so
-
 
 
 CUDA_PATH = /usr/local/cuda
@@ -39,7 +33,7 @@ NVCC_FLAGS = -m64 -g -dc -Wno-deprecated-gpu-targets --std=c++11 \
 
 
 sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
-	g++ -g -o lib/sgbm.so -std=c++11 $(INCLUDE) $^ $(LIBS)
+	g++ -g -o sgbm -std=c++11 $(INCLUDE) $^ $(LIBS)
 
 
 %.cu.o: lib/%.cu

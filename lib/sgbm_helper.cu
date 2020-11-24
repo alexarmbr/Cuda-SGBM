@@ -5,14 +5,6 @@
 
 
 
-// # define D_STEP 1
-// # define D 52
-// # define ARR_SIZE 52
-// # define P1 5
-// # define P2 90000
-// # define SHMEM_SIZE 64
-
-
 
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three){
@@ -523,7 +515,6 @@ int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
 
   float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
       int nblock = nRows / SHMEM_SIZE;
-      printf("calling r aggregate \n");
       dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
       dim3 gridSize = dim3(1, nblock);
       __r_aggregate<<<gridSize, blockSize>>>(dp, shifted_images, nRows, nCols);
