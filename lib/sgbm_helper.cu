@@ -23,11 +23,10 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
   }
 
 
-// TODO, what if m % SHMEM_SIZE != 0 ?
+
 // right aggregation
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
 {
-  //printf("hello! \n");
   int row = threadIdx.y + blockIdx.y * blockDim.y;
   int col = threadIdx.x;
   int depth_dim_size = m*n;
@@ -73,8 +72,6 @@ __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
           int ind = agg_row * n + K + 1;
           for (int d = 0; d < D; d+=D_STEP){
             dp[ind] += cost_image[ind] + dp_criteria(dp, ind-1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
-            //printf("ind: %d, %f \n", ind, cost_image[ind]);
-            //dp[ind] = cost_image[ind] + dp[ind - 1];
             ind += (depth_dim_size * D_STEP);
           }
           local_K++;
@@ -137,7 +134,6 @@ __global__ void __l_aggregate(float *dp, float *cost_image, int m, int n)
           int ind = agg_row * n + K - 1;
           for (int d = 0; d < D; d+=D_STEP){
             dp[ind] += cost_image[ind] + dp_criteria(dp, ind+1, depth_dim_size, d, (float) P1, (float) P2, &d0, &d1, &d2, &d3);
-            //dp[ind] = cost_image[ind] + dp[ind - 1];
             ind += (depth_dim_size * D_STEP);
           }
           local_K--;
@@ -175,8 +171,6 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
         for (int depth = 0; depth < D; depth+=D_STEP){
           prev_min = fminf(dp[ind], prev_min);
           ind += (depth_dim_size * D_STEP);
-          //arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
-          //arr_ind++;
         }
 
         //  float prev_min = arr_min(arr, D_SIZE);
@@ -219,12 +213,9 @@ __global__ void __vertical_aggregate_down(float *dp, float *cost_image,
           int ind = (row + 1) * n + col;
           
           // calculate min cost disparity for this column from row-1
-          //#pragma unroll
           for (int depth = 0; depth < D; depth+=D_STEP){
             prev_min = fminf(dp[ind], prev_min);
             ind += (depth_dim_size * D_STEP);
-            //arr[arr_ind] = cost_image[depth * m * n + (row - 1) * n + col];
-            //arr_ind++;
           }
   
           //  float prev_min = arr_min(arr, D_SIZE);
