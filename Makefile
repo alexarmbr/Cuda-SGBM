@@ -30,7 +30,7 @@ CUDA_LINK_FLAGS = -dlink -Wno-deprecated-gpu-targets
 NVCC_FLAGS = -m64 -g -dc -Wno-deprecated-gpu-targets --std=c++11 \
              --expt-relaxed-constexpr
 
-
+all : sgbm
 
 sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
 	g++ -g -o sgbm -std=c++11 $(INCLUDE) $^ $(LIBS)
@@ -41,5 +41,9 @@ sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
 
 cuda.o: sgbm_helper.cu.o
 	$(NVCC) $(CUDA_LINK_FLAGS) $(NVCC_GENCODES) -o $@ $(NVCC_INCLUDE) $^
+
+imload_benchmark: imload_benchmark.cpp
+	g++-8 -lstdc++fs -std=c++17 -o imload_benchmark imload_benchmark.cpp -lstdc++fs $(INCLUDE) $(LIBS)
+
 clean:
 	rm -f *.o lib/*.so
