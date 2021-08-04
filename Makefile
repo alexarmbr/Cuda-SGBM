@@ -17,7 +17,7 @@ NVCC_GENCODES = -gencode arch=compute_30,code=sm_30 \
 		-gencode arch=compute_61,code=sm_61 \
 		-gencode arch=compute_61,code=compute_61
 
-INCLUDE = -I/usr/local/include/opencv4 -I$(CUDA_INC_PATH)
+INCLUDE = -I/usr/local/include/opencv4 -I$(CUDA_INC_PATH) -I lib/
 #INCLUDE = -I/usr/local/include/opencv4 -I$(CUDA_INC_PATH)
 
 LIBS = -L/usr/local/lib -L$(CUDA_LIB_PATH) -lopencv_dnn -lopencv_gapi -lopencv_highgui -lopencv_ml \

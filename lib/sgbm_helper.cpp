@@ -6,6 +6,71 @@
 using namespace std;
 using namespace cv;
 
+
+
+
+extern "C" void _sgbm(cv::Mat * im1,
+cv::Mat * im2,
+int * depth_im,
+int nRows,
+int nCols)
+{
+    unsigned long long int * cim1;
+    unsigned long long int * cim2;
+    float * shifted_images;
+    cim1 = new unsigned long long int [nCols * nRows];
+    cim2 = new unsigned long long int [nCols * nRows];
+    shifted_images = new float [nCols * nRows * D];
+    
+    // census transform both images
+    census_transform_mat(im1, cim1, nRows, nCols, 3);
+    census_transform_mat(im2, cim2, nRows, nCols, 3);
+
+    // if shifted_images, cim1, cim2 were numpy arrays with dimensions disparity (D), row, col
+    // shifted_images[D,i,j] = cim1[i,j+D] - cim2[i,j]
+    // with padding where necessary
+    shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols);
+    
+    // cudaMalloc modifies this pointer to point to block of memory on device
+    float* gpu_ptr_shifted_im;
+    gpuErrchk( cudaMalloc((void **) &gpu_ptr_shifted_im, sizeof(float) * nCols * nRows * D) );
+    gpuErrchk( cudaMemcpy(gpu_ptr_shifted_im, shifted_images, sizeof(float) * nCols * nRows * D, cudaMemcpyHostToDevice) );
+      
+    // aggregated image will go here
+    float* gpu_ptr_agg_im;
+    gpuErrchk( cudaMalloc((void **) &gpu_ptr_agg_im, sizeof(float) * nCols * nRows * D) );
+    gpuErrchk( cudaMemset(gpu_ptr_agg_im, 0, sizeof(float) * nCols * nRows * D) );
+
+    // each direction of aggregation
+    gpu_ptr_agg_im = r_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = l_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = vertical_aggregate_down(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = vertical_aggregate_up(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_tl_br_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_tr_bl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_br_tl_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpu_ptr_agg_im = diagonal_bl_tr_aggregate(nCols, nRows, gpu_ptr_shifted_im, gpu_ptr_agg_im);
+    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchk( cudaDeviceSynchronize() );
+
+
+
+    // argmin
+    int * stereo_im;
+    gpuErrchk( cudaMalloc((void **) &stereo_im, sizeof(int) * nCols * nRows) );
+    gpuErrchk( cudaMemset(stereo_im, 0, sizeof(int) * nCols * nRows) );
+    argmin(nCols, nRows, gpu_ptr_agg_im, stereo_im);
+    //int * stereo_im_host = new int[nCols * nRows];
+    cudaMemcpy(depth_im, stereo_im, sizeof(int) * nCols * nRows, cudaMemcpyDeviceToHost);
+
+
+}
+
+
+
+
+
+
 extern "C" void test_sum(const uint8_t * in_arr,
 unsigned long long int * out_arr,
 int rows, int cols)
@@ -62,7 +127,7 @@ unsigned long long b){
 extern "C" void shift_subtract_stack(unsigned long long int * L,
 unsigned long long int * R,
 float * out,
-int rows, int cols, int D){
+int rows, int cols){
 
     int d = -1;
     int imsize = rows * cols;
