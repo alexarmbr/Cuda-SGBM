@@ -1,7 +1,7 @@
 
 
 
-CUDA_PATH = /usr/local/cuda
+CUDA_PATH = /usr/local/cuda-10.2
 CUDA_INC_PATH = $(CUDA_PATH)/include
 CUDA_BIN_PATH = $(CUDA_PATH)/bin
 CUDA_LIB_PATH = $(CUDA_PATH)/lib64
@@ -27,23 +27,27 @@ LIBS = -L/usr/local/lib -L$(CUDA_LIB_PATH) -lopencv_dnn -lopencv_gapi -lopencv_h
 
 CUDA_LINK_FLAGS = -dlink -Wno-deprecated-gpu-targets
 
-NVCC_FLAGS = -m64 -g -dc -Wno-deprecated-gpu-targets --std=c++11 \
-             --expt-relaxed-constexpr
+NVCC_FLAGS = -m64 -g -dc -Wno-deprecated-gpu-targets --expt-relaxed-constexpr
 
 all : sgbm
 
 sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
 	g++ -g -o sgbm -std=c++11 $(INCLUDE) $^ $(LIBS)
 
+sgbm_video_naive: sgbm_video_naive.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
+	g++ -g -o sgbm_video_naive -std=c++11 $(INCLUDE) $^ $(LIBS)
+
+sgbm_video_omp: sgbm_video_omp.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
+	g++ -g -fopenmp -o sgbm_video_omp -std=c++11 $(INCLUDE) $^ $(LIBS)
 
 %.cu.o: lib/%.cu
-	$(NVCC)  $(NVCC_GENCODES) -g -G -c -o $@ $(NVCC_INCLUDE) $<
+	$(NVCC) $(NVCC_GENCODES) -g -G -c -o $@ $(NVCC_INCLUDE) $<
 
 cuda.o: sgbm_helper.cu.o
 	$(NVCC) $(CUDA_LINK_FLAGS) $(NVCC_GENCODES) -o $@ $(NVCC_INCLUDE) $^
 
 imload_benchmark: imload_benchmark.cpp
-	g++-8 -lstdc++fs -std=c++17 -o imload_benchmark imload_benchmark.cpp -lstdc++fs $(INCLUDE) $(LIBS)
+	g++ -o imload_benchmark imload_benchmark.cpp $(INCLUDE) $(LIBS)
 
 clean:
-	rm -f *.o lib/*.so
+	rm -f *.o lib/*.so sgbm sgbm_video_naive imload_benchmark

@@ -4,26 +4,30 @@
 
 #include <iostream>
 #include <chrono>
-#include <filesystem>
 #include <algorithm>
 #include <vector>
 
 #include "assert.h"
+#include "dirent.h"
 
-
-namespace fs = std::filesystem;
 int main( int argc, char** argv )
 {
-    std::string path = "2010_03_09_drive_0023/2010_03_09_drive_0023_Images";
+    const char * path = "2010_03_09_drive_0023/2010_03_09_drive_0023_Images";
     std::vector<std::string> leftIm;
     std::vector<std::string> rightIm;
     
-    for (const auto & fileNameObj : fs::directory_iterator(path))
+    DIR *dir;
+    struct dirent *ent;
+    
+    if ((dir = opendir (path)) == NULL)
+        return -1;
+
+    while ((ent = readdir (dir)) != NULL)
     {
-        std::string entry = fileNameObj.path();
-        if (entry[52] == '1')
+        std::string entry = ent->d_name;
+        if (entry[1] == '1')
             leftIm.push_back(entry);
-        else if(entry[52] == '2')
+        else if(entry[1] == '2')
             rightIm.push_back(entry);
     }
     std::sort(leftIm.begin(), leftIm.end());
@@ -36,8 +40,8 @@ int main( int argc, char** argv )
     auto clock_start = std::chrono::system_clock::now();
     for(int i=0; i < leftIm.size(); i++)
     {
-        im1 = imread(leftIm[i], cv::IMREAD_GRAYSCALE);
-        im2 = imread(rightIm[i], cv::IMREAD_GRAYSCALE);
+        im1 = imread((std::string) path + "/" + leftIm[i], cv::IMREAD_GRAYSCALE);
+        im2 = imread((std::string) path + "/" + rightIm[i], cv::IMREAD_GRAYSCALE);
     }
     auto clock_end = std::chrono::system_clock::now();
     unsigned int elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end-clock_start).count();

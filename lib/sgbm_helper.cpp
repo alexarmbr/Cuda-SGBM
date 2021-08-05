@@ -13,7 +13,8 @@ extern "C" void _sgbm(cv::Mat * im1,
 cv::Mat * im2,
 int * depth_im,
 int nRows,
-int nCols)
+int nCols,
+int stream)
 {
     unsigned long long int * cim1;
     unsigned long long int * cim2;

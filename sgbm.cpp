@@ -13,16 +13,18 @@ using namespace std;
 
 int main( int argc, char** argv )
 {
-    if( argc != 3)
-    {
-     cout <<" Usage: sgbm Image1 Image2" << endl;
-     return -1;
-    }
+    // if( argc != 3)
+    // {
+    //  cout <<" Usage: sgbm Image1 Image2" << endl;
+    //  return -1;
+    // }
 
     Mat im1;
     Mat im2;
-    im1 = imread(argv[1], IMREAD_GRAYSCALE);
-    im2 = imread(argv[2], IMREAD_GRAYSCALE);
+    // im1 = imread(argv[1], IMREAD_GRAYSCALE);
+    // im2 = imread(argv[2], IMREAD_GRAYSCALE);
+    im1 = imread("im0.png", IMREAD_GRAYSCALE);
+    im2 = imread("im1.png", IMREAD_GRAYSCALE);
     //resize(im1, im1, Size(480,480));
     //resize(im2, im2, Size(480,480));
 
