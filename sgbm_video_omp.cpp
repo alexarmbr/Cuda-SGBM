@@ -55,9 +55,10 @@ int main( int argc, char** argv )
         #pragma omp parallel for
         for(int i=0; i < numImages; i++)
         {
+            int tid = omp_get_thread_num();
             im1 = imread((std::string) path + "/" + leftIm[i], cv::IMREAD_GRAYSCALE);
             im2 = imread((std::string) path + "/" + rightIm[i], cv::IMREAD_GRAYSCALE);
-            _sgbm(&im1, &im2, depth_im, nRows, nCols);
+            _sgbm(&im1, &im2, depth_im, nRows, nCols, tid);
         }
     }
     auto clock_end = std::chrono::system_clock::now();

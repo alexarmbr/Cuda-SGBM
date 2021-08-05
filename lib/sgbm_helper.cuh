@@ -38,15 +38,15 @@ __global__ void __argmin_3d_mat(float * dp, int * stereo_im, int m, int n);
 
 
 // wrapper funcs
-float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp);
-float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp);
-float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp);
-int * argmin(int nCols, int nRows, float * dp, int * stereo_im);
+float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream);
+int * argmin(int nCols, int nRows, float * dp, int * stereo_im, int stream);
 
 
 
