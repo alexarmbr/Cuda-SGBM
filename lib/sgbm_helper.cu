@@ -22,6 +22,47 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
 
   }
 
+__device__ float hamming_dist(unsigned long long a,
+    unsigned long long b){
+        unsigned long long c = a^b;
+        float z = 0;
+        while (c != 0){
+            z += c & 1;
+            c>>=1;
+        }
+        return z;
+    }
+
+
+
+
+
+__global__ void device_shift_subtract_stack(unsigned long long int * L,
+  unsigned long long int * R,
+  float * out,
+  int rows, int cols)
+{
+  int d = -1;
+  int imsize = rows * cols;
+  int loopLim = rows * cols * D;
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  int j = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i + j * cols;
+  for(int d = 0; d < D; d++)
+  {
+    // out[i,j] = out[i,j+d] - out[i,j]
+    if(j+d < cols)
+      out[ind] = 1e7;
+    else
+      out[ind] = hamming_dist(R[(i % imsize) + d], L[i % imsize]);
+    ind += imsize;
+  }
+}
+
+
+
+
+
 
 
 // right aggregation

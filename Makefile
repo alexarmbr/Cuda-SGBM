@@ -30,6 +30,11 @@ CUDA_LINK_FLAGS = -dlink -Wno-deprecated-gpu-targets
 NVCC_FLAGS = -m64 -g -dc -Wno-deprecated-gpu-targets --expt-relaxed-constexpr
 
 all : sgbm
+benchmarks : shift_subtract_stack
+
+shift_subtract_stack : benchmarks/shift_subtract_stack.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
+	g++ -g -o benchmarks/shift_subtract_stack -std=c++11 $(INCLUDE) $^ $(LIBS)
+
 
 sgbm: sgbm.cpp lib/sgbm_helper.cpp cuda.o sgbm_helper.cu.o
 	g++ -g -o sgbm -std=c++11 $(INCLUDE) $^ $(LIBS)
