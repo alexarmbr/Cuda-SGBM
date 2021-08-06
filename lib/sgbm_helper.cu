@@ -22,7 +22,7 @@ __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, floa
 
   }
 
-__device__ float hamming_dist(unsigned long long a,
+__device__ float __hamming_dist(unsigned long long a,
     unsigned long long b){
         unsigned long long c = a^b;
         float z = 0;
@@ -34,28 +34,43 @@ __device__ float hamming_dist(unsigned long long a,
     }
 
 
+float * device_shift_subtract_stack(unsigned long long int * L, unsigned long long int * R,
+  float * out,
+  int rows, int cols)
+  {
+    int blockSize = 32;
+    int gridX = (cols + blockSize - 1) / blockSize;
+    int gridY = (rows + blockSize - 1) / blockSize;
+    dim3 grid(gridX, gridY);
+    dim3 block(blockSize, blockSize, 1);
+    __shift_subtract_stack<<<grid, block>>>(L,R,out,rows,cols);
+    return out;
+  }
 
 
-
-__global__ void device_shift_subtract_stack(unsigned long long int * L,
+__global__ void __shift_subtract_stack(unsigned long long int * L,
   unsigned long long int * R,
   float * out,
   int rows, int cols)
 {
-  int d = -1;
+  //int d = -1;
   int imsize = rows * cols;
-  int loopLim = rows * cols * D;
-  int i = threadIdx.x + blockIdx.x * blockDim.x;
-  int j = threadIdx.y + blockIdx.y * blockDim.y;
-  int ind = i + j * cols;
-  for(int d = 0; d < D; d++)
+  //int loopLim = rows * cols * D;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  
+  if (ind < imsize)
   {
-    // out[i,j] = out[i,j+d] - out[i,j]
-    if(j+d < cols)
-      out[ind] = 1e7;
-    else
-      out[ind] = hamming_dist(R[(i % imsize) + d], L[i % imsize]);
-    ind += imsize;
+    for(int d = 0; d < D; d++)
+    {
+      // out[i,j] = out[i,j+d] - out[i,j]
+      if (ind % cols <= cols - 1 - d)
+        out[ind] = __hamming_dist(R[(ind % imsize) + d], L[ind % imsize]);
+      else
+        out[ind] = 1e7;
+      ind += imsize;
+    }
   }
 }
 
@@ -534,10 +549,10 @@ __global__ void __argmin_3d_mat(float * dp, int * stereo_im,
 
 
   // wrappers
-int * argmin(int nCols, int nRows, float * dp, int * stereo_im, int stream){
+int * argmin(int nCols, int nRows, float * dp, int * stereo_im, cudaStream_t stream){
   dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
   dim3 gridSize = dim3(1, 1);
-  __argmin_3d_mat<<<gridSize, blockSize, 0, (cudaStream_t) stream>>>(dp, stereo_im, nRows, nCols);
+  __argmin_3d_mat<<<gridSize, blockSize, 0, stream>>>(dp, stereo_im, nRows, nCols);
   return stereo_im;
 }
 
@@ -545,45 +560,45 @@ int * argmin(int nCols, int nRows, float * dp, int * stereo_im, int stream){
 
 
 
-  float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+  float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
       int nblock = nRows / SHMEM_SIZE;
       dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
       dim3 gridSize = dim3(1, nblock);
-      __r_aggregate<<<gridSize, blockSize, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+      __r_aggregate<<<gridSize, blockSize, 0, stream>>>(dp, shifted_images, nRows, nCols);
       return dp;
     }
 
   
-  float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+  float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
     int nblock = nRows / SHMEM_SIZE;
     dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
     dim3 gridSize = dim3(1, nblock);
-    __l_aggregate<<<gridSize, blockSize, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+    __l_aggregate<<<gridSize, blockSize, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
   
-  float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp, int stream){
-    __vertical_aggregate_down<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+  float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
+    __vertical_aggregate_down<<<1, 256, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp, int stream){
-    __vertical_aggregate_up<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+  float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
+    __vertical_aggregate_up<<<1, 256, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
-    __diagonal_tl_br_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
+    __diagonal_tl_br_aggregate<<<1, 256, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
-    __diagonal_tr_bl_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
+    __diagonal_tr_bl_aggregate<<<1, 256, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
-    __diagonal_br_tl_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
+    __diagonal_br_tl_aggregate<<<1, 256, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
-    __diagonal_bl_tr_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream){
+    __diagonal_bl_tr_aggregate<<<1, 256, 0, stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
 

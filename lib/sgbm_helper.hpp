@@ -1,3 +1,6 @@
+#ifndef SGBM_HELPER
+#define SGBM_HELPER
+
 #include "sgbm_helper.cuh"
 #include <iostream>
 #include <opencv2/core/core.hpp>
@@ -22,7 +25,7 @@ cv::Mat * im2,
 int * depth_im,
 int nRows,
 int nCols,
-int stream = 0);
+cudaStream_t stream = 0);
 
 
 
@@ -49,3 +52,6 @@ int rows, int cols);
 extern "C" void census_transform_mat(Mat * in_arr,
 unsigned long long int * out_arr,
 int rows, int cols, int csize);
+
+
+#endif

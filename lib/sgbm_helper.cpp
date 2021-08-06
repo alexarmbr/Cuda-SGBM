@@ -14,7 +14,7 @@ cv::Mat * im2,
 int * depth_im,
 int nRows,
 int nCols,
-int stream)
+cudaStream_t stream)
 {
     unsigned long long int * cim1;
     unsigned long long int * cim2;
@@ -129,10 +129,14 @@ extern "C" void shift_subtract_stack(unsigned long long int * L,
 unsigned long long int * R,
 float * out,
 int rows, int cols){
+    // std::cout << "shift subtract stack" << std::endl;
+    // std::cout << D << std::endl;
+    // std::cout << rows*cols << std::endl;
 
     int d = -1;
     int imsize = rows * cols;
     for(int i = 0; i < imsize * D; i++){
+        //std::cout << "iter " << i << std::endl;
         
         // compute for next disparity
         if (i % (rows * cols) == 0)
@@ -146,6 +150,7 @@ int rows, int cols){
         else
             out[i] = hamming_dist(R[(i % imsize)+d], L[i % imsize]);
     }
+    //std::cout << "shift subtract stack complete" << std::endl;
 }
 
 
