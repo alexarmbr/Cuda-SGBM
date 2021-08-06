@@ -534,10 +534,10 @@ __global__ void __argmin_3d_mat(float * dp, int * stereo_im,
 
 
   // wrappers
-int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
+int * argmin(int nCols, int nRows, float * dp, int * stereo_im, int stream){
   dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
   dim3 gridSize = dim3(1, 1);
-  __argmin_3d_mat<<<gridSize, blockSize>>>(dp, stereo_im, nRows, nCols);
+  __argmin_3d_mat<<<gridSize, blockSize, 0, (cudaStream_t) stream>>>(dp, stereo_im, nRows, nCols);
   return stereo_im;
 }
 
@@ -545,45 +545,45 @@ int * argmin(int nCols, int nRows, float * dp, int * stereo_im){
 
 
 
-  float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+  float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
       int nblock = nRows / SHMEM_SIZE;
       dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
       dim3 gridSize = dim3(1, nblock);
-      __r_aggregate<<<gridSize, blockSize>>>(dp, shifted_images, nRows, nCols);
+      __r_aggregate<<<gridSize, blockSize, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
       return dp;
     }
 
   
-  float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
+  float * l_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
     int nblock = nRows / SHMEM_SIZE;
     dim3 blockSize = dim3(SHMEM_SIZE, SHMEM_SIZE, 1);
     dim3 gridSize = dim3(1, nblock);
-    __l_aggregate<<<gridSize, blockSize>>>(dp, shifted_images, nRows, nCols);
+    __l_aggregate<<<gridSize, blockSize, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
   
-  float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp){
-    __vertical_aggregate_down<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+  float * vertical_aggregate_down(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+    __vertical_aggregate_down<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp){
-    __vertical_aggregate_up<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+  float * vertical_aggregate_up(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+    __vertical_aggregate_up<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
-    __diagonal_tl_br_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_tl_br_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+    __diagonal_tl_br_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
-    __diagonal_tr_bl_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_tr_bl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+    __diagonal_tr_bl_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
-    __diagonal_br_tl_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_br_tl_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+    __diagonal_br_tl_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
-  float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp){
-    __diagonal_bl_tr_aggregate<<<1, 256>>>(dp, shifted_images, nRows, nCols);
+  float * diagonal_bl_tr_aggregate(int nCols, int nRows, float * shifted_images, float * dp, int stream){
+    __diagonal_bl_tr_aggregate<<<1, 256, 0, (cudaStream_t) stream>>>(dp, shifted_images, nRows, nCols);
     return dp;
   }
 
