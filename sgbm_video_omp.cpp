@@ -16,7 +16,7 @@ const int NUM_IMAGES = 3;
 
 int main( int argc, char** argv )
 {
-    const char * path = "2010_03_09_drive_0023/2010_03_09_drive_0023_Images";
+    const char * path = "2010_03_09_drive_0023/2010_03_09_drive_0023_Images_resize";
     std::vector<std::string> leftIm;
     std::vector<std::string> rightIm;
     
