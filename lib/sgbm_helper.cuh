@@ -10,7 +10,7 @@
 #define ARR_SIZE 51
 #define P1 5
 #define P2 90000
-#define SHMEM_SIZE 16
+#define SHMEM_SIZE 32
 
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three);

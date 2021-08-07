@@ -34,6 +34,23 @@ __device__ float __hamming_dist(unsigned long long a,
     }
 
 
+  __device__ float __hamming_dist_fast(unsigned long long a,
+    unsigned long long b){
+        unsigned long long c = a^b;
+        float z = 0;
+        while (c != 0){
+            z += c & 1;
+            c>>=1;
+        }
+        return z;
+    }
+
+
+
+
+
+
+
 float * device_shift_subtract_stack(unsigned long long int * L, unsigned long long int * R,
   float * out,
   int rows, int cols)
@@ -53,28 +70,42 @@ __global__ void __shift_subtract_stack(unsigned long long int * L,
   float * out,
   int rows, int cols)
 {
-  //int d = -1;
   int imsize = rows * cols;
-  //int loopLim = rows * cols * D;
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
   int ind = i * cols + j;
   
-  if (ind < imsize)
+  for(int d = 0; d < D; d++)
   {
-    for(int d = 0; d < D; d++)
-    {
-      // out[i,j] = out[i,j+d] - out[i,j]
-      if (ind % cols <= cols - 1 - d)
-        out[ind] = __hamming_dist(R[(ind % imsize) + d], L[ind % imsize]);
-      else
-        out[ind] = 1e7;
-      ind += imsize;
-    }
+    if (j + d < cols)
+      out[ind] = __hamming_dist(R[(ind % imsize) + d], L[ind % imsize]);
+    else
+      out[ind] = 1e7;
+    ind += imsize;
   }
 }
 
 
+
+__global__ void __shift_subtract_stack_2(unsigned long long int * L,
+  unsigned long long int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+      out[ind] = __hamming_dist(R[(ind % imsize) + d], L[ind % imsize]);
+    else
+      out[ind] = 1e7;
+    ind += imsize;
+  }
+}
 
 
 
