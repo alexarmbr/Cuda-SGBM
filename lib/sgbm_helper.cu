@@ -91,7 +91,38 @@ __global__ void __shift_subtract_stack(unsigned int * L,
 
 
 
-__global__ void __shift_subtract_stack_2(unsigned int * L,
+__global__ void __shift_subtract_stack_3(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  
+  #pragma unroll
+  for(int d = 0; d < D; d++)
+  {
+    out[ind] = 10e7;
+    if (j + d < cols)
+    {
+      a = R[(ind % imsize) + d];
+      b = L[ind % imsize];
+      a = a^b;
+      a = a - ((a >> 1) & 0x55555555);
+      a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+      a = (a + (a >> 4)) & 0xF0F0F0F;
+      a = (a * 0x01010101) >> 24;
+      out[ind] = a;
+    }
+    ind += imsize;
+  }
+}
+
+
+
+__global__ void __shift_subtract_stack_3(unsigned int * L,
   unsigned int * R,
   float * out,
   int rows, int cols)
@@ -104,13 +135,13 @@ __global__ void __shift_subtract_stack_2(unsigned int * L,
   for(int d = 0; d < D; d++)
   {
     if (j + d < cols)
+
       out[ind] = __hamming_dist_int_fast(R[(ind % imsize) + d], L[ind % imsize]);
     else
       out[ind] = 1e7;
     ind += imsize;
   }
 }
-
 
 
 

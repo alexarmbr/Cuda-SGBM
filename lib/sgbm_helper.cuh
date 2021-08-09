@@ -26,6 +26,12 @@ __global__ void __shift_subtract_stack_2(unsigned int * L,
     int rows, int cols);
 
 
+__global__ void __shift_subtract_stack_3(unsigned int * L,
+    unsigned int * R,
+    float * out,
+    int rows, int cols);
+
+
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n);
 
 __global__ void __l_aggregate(float *dp, float *cost_image, int m, int n);
