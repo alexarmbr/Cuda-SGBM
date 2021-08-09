@@ -55,11 +55,6 @@ __device__ float __hamming_dist(unsigned long long a,
     }
 
 
-
-
-
-
-
 float * device_shift_subtract_stack(unsigned int * L, unsigned int * R,
   float * out,
   int rows, int cols)
