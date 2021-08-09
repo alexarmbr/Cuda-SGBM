@@ -7,7 +7,7 @@
 #include <limits>
 
 const int NUM_ITERS = 1;
-const int NUM_STREAMS = 4;
+const int NUM_STREAMS = 1;
 
 // unsigned long long * genData(int size)
 // {
@@ -37,8 +37,8 @@ unsigned int * genData(int size)
 int main( int argc, char** argv )
 {
 
-    int rows = 256;
-    int cols = 480;
+    int rows = 2048;
+    int cols = 1024;
     unsigned int * L[NUM_STREAMS];
     unsigned int * R[NUM_STREAMS];
     float * shifted_images[NUM_STREAMS];
@@ -53,7 +53,7 @@ int main( int argc, char** argv )
 
     // cpu benchmark
     // auto clock_start = std::chrono::system_clock::now();
-    // for(int iter = 0; iter < NUM_ITERS; iter++)
+    // for(int iter = 0; iter < 1; iter++)
     // {
     //     std::cout << "cpu iter: " << iter << std::endl;
     //     shift_subtract_stack(L[0], R[0], shifted_images[0], rows, cols);
