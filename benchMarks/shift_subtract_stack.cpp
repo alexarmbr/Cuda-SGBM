@@ -6,7 +6,8 @@
 #include <random>
 #include <limits>
 
-const int NUM_ITERS = 10;
+const int NUM_ITERS = 1;
+const int NUM_STREAMS = 4;
 
 // unsigned long long * genData(int size)
 // {
@@ -38,22 +39,29 @@ int main( int argc, char** argv )
 
     int rows = 256;
     int cols = 480;
-    unsigned int * L = genData(rows * cols);
-    unsigned int * R = genData(rows * cols);
-    float * shifted_images = new float [rows * cols * D];
-    
-    auto clock_start = std::chrono::system_clock::now();
-    
-    for(int iter = 0; iter < NUM_ITERS; iter++)
+    unsigned int * L[NUM_STREAMS];
+    unsigned int * R[NUM_STREAMS];
+    float * shifted_images[NUM_STREAMS];
+
+    for(int i = 0; i < NUM_STREAMS; i++)
     {
-        std::cout << "cpu iter: " << iter << std::endl;
-        shift_subtract_stack(L, R, shifted_images, rows, cols);
+        L[i] = genData(rows * cols);
+        R[i] = genData(rows * cols);
+        shifted_images[i] = new float [rows * cols * D];
     }
-        
-    auto clock_end = std::chrono::system_clock::now();
-    unsigned int elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end-clock_start).count();
-    float avg_time = ((float) elapsed_time / (float) NUM_ITERS);
-    std::cout << "average cpu time: " << avg_time << std::endl;
+    
+
+    // cpu benchmark
+    // auto clock_start = std::chrono::system_clock::now();
+    // for(int iter = 0; iter < NUM_ITERS; iter++)
+    // {
+    //     std::cout << "cpu iter: " << iter << std::endl;
+    //     shift_subtract_stack(L[0], R[0], shifted_images[0], rows, cols);
+    // }
+    // auto clock_end = std::chrono::system_clock::now();
+    // unsigned int elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end-clock_start).count();
+    // float avg_time = ((float) elapsed_time / (float) NUM_ITERS);
+    // std::cout << "average cpu time: " << avg_time << std::endl;
 
     unsigned int * im1_gpu;
     unsigned int * im2_gpu;
@@ -66,8 +74,8 @@ int main( int argc, char** argv )
         gpuErrchk( cudaMalloc((void **) &shifted_images_gpu, sizeof(float) * rows * cols * D) );
         gpuErrchk( cudaMalloc((void **) &im1_gpu, sizeof(unsigned int) * rows * cols) );
         gpuErrchk( cudaMalloc((void **) &im2_gpu, sizeof(unsigned int) * rows * cols) );
-        gpuErrchk( cudaMemcpy(im1_gpu, L, sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
-        gpuErrchk( cudaMemcpy(im2_gpu, R, sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMemcpy(im1_gpu, L[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMemcpy(im2_gpu, R[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
         
         device_shift_subtract_stack(im1_gpu,
         im2_gpu,
@@ -83,18 +91,12 @@ int main( int argc, char** argv )
     std::cout << "average gpu time: " << avg_time_gpu << std::endl;
 
 
-    float * shifted_images_cpu = new float[rows * cols * D];
-    gpuErrchk( cudaMemcpy(shifted_images_cpu, shifted_images_gpu, sizeof(float) * rows * cols * D, cudaMemcpyDeviceToHost) );
+    // float * shifted_images_cpu = new float[rows * cols * D];
+    // gpuErrchk( cudaMemcpy(shifted_images_cpu, shifted_images_gpu, sizeof(float) * rows * cols * D, cudaMemcpyDeviceToHost) );
 
 
-    for(int i = 0; i < rows * cols * D; i++)
-    {
-        assert(shifted_images_cpu[i] == shifted_images[i]);
-    }   
-        
-        
-
-
-
-
+    // for(int i = 0; i < rows * cols * D; i++)
+    // {
+    //     assert(shifted_images_cpu[i] == shifted_images[0][i]);
+    // }   
 }
