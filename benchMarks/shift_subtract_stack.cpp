@@ -6,7 +6,7 @@
 #include <random>
 #include <limits>
 
-const int NUM_ITERS = 1;
+const int NUM_ITERS = 10;
 const int NUM_STREAMS = 1;
 
 // unsigned long long * genData(int size)
@@ -67,16 +67,16 @@ int main( int argc, char** argv )
     unsigned int * im2_gpu;
     float * shifted_images_gpu;
     
+    //std::chrono::system_clock::time_point clock_start_gpu;
+    gpuErrchk( cudaMalloc((void **) &shifted_images_gpu, sizeof(float) * rows * cols * D) );
+    gpuErrchk( cudaMalloc((void **) &im1_gpu, sizeof(unsigned int) * rows * cols) );
+    gpuErrchk( cudaMalloc((void **) &im2_gpu, sizeof(unsigned int) * rows * cols) );
+    gpuErrchk( cudaMemcpy(im1_gpu, L[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
+    gpuErrchk( cudaMemcpy(im2_gpu, R[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
     auto clock_start_gpu = std::chrono::system_clock::now();
     for(int iter = 0; iter < NUM_ITERS; iter++)
     {
-        std::cout << "gpu iter: " << iter << std::endl;
-        gpuErrchk( cudaMalloc((void **) &shifted_images_gpu, sizeof(float) * rows * cols * D) );
-        gpuErrchk( cudaMalloc((void **) &im1_gpu, sizeof(unsigned int) * rows * cols) );
-        gpuErrchk( cudaMalloc((void **) &im2_gpu, sizeof(unsigned int) * rows * cols) );
-        gpuErrchk( cudaMemcpy(im1_gpu, L[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
-        gpuErrchk( cudaMemcpy(im2_gpu, R[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
-        
+        //std::cout << "gpu iter: " << iter << std::endl;
         device_shift_subtract_stack(im1_gpu,
         im2_gpu,
         shifted_images_gpu,

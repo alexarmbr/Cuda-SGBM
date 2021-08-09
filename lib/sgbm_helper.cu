@@ -64,7 +64,7 @@ float * device_shift_subtract_stack(unsigned int * L, unsigned int * R,
     int gridY = (rows + blockSize - 1) / blockSize;
     dim3 grid(gridX, gridY);
     dim3 block(blockSize, blockSize, 1);
-    __shift_subtract_stack_2<<<grid, block>>>(L,R,out,rows,cols);
+    __shift_subtract_stack_3<<<grid, block>>>(L,R,out,rows,cols);
     return out;
   }
 
@@ -102,27 +102,52 @@ __global__ void __shift_subtract_stack_3(unsigned int * L,
   int ind = i * cols + j;
   
   #pragma unroll
-  for(int d = 0; d < D; d++)
+  for(int d = 0; d < D; d+=2)
   {
-    out[ind] = 10e7;
-    if (j + d < cols)
-    {
-      a = R[(ind % imsize) + d];
-      b = L[ind % imsize];
-      a = a^b;
-      a = a - ((a >> 1) & 0x55555555);
-      a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
-      a = (a + (a >> 4)) & 0xF0F0F0F;
-      a = (a * 0x01010101) >> 24;
-      out[ind] = a;
+    
+      
+    unsigned int a1;
+    unsigned int b1;
+    unsigned int a2;
+    unsigned int b2;
+    
+    if (j + d + 1 < cols)
+      {
+      a1 = R[(ind % imsize) + d];
+      b1 = L[ind % imsize];
+      a2 = R[(ind % imsize) + d + 1];
+      b2 = L[ind % imsize + 1];
+      
+
+      a1 = a1^b1;
+      a2 = a2^b2;
+      
+      a1 = a1 - ((a1 >> 1) & 0x55555555);
+      a2 = a2 - ((a2 >> 1) & 0x55555555);
+      
+      a1 = (a1 & 0x33333333) + ((a1 >> 2) & 0x33333333);
+      a2 = (a2 & 0x33333333) + ((a2 >> 2) & 0x33333333);
+      
+      a1 = (a1 + (a1 >> 4)) & 0xF0F0F0F;
+      a2 = (a2 + (a2 >> 4)) & 0xF0F0F0F;
+      
+      a1 = (a1 * 0x01010101) >> 24;
+      a2 = (a2 * 0x01010101) >> 24;
+      out[ind] = a1;
+      out[ind] = a2;
     }
-    ind += imsize;
+    else
+    {
+      out[ind] = 10e7;
+      out[ind + imsize] = 10e7;
+    }
+    ind += 2 * imsize;
   }
 }
 
 
 
-__global__ void __shift_subtract_stack_3(unsigned int * L,
+__global__ void __shift_subtract_stack_2(unsigned int * L,
   unsigned int * R,
   float * out,
   int rows, int cols)
