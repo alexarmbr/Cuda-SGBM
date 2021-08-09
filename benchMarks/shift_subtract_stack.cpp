@@ -8,26 +8,38 @@
 
 const int NUM_ITERS = 1;
 
+// unsigned long long * genData(int size)
+// {
+
+//     unsigned long long * arr = new unsigned long long [size];
+//     std::random_device rd;     
+//     std::mt19937_64 eng(rd());
+//     std::uniform_int_distribution<unsigned long long> distr;
+
+//     for(int i = 0; i < size; i++)
+//         arr[i] = distr(eng);
+//     return arr;
+// }
+
+
 unsigned long long * genData(int size)
 {
-
-    unsigned long long * arr = new unsigned long long [size];
-    std::random_device rd;     
-    std::mt19937_64 eng(rd());
-    std::uniform_int_distribution<unsigned long long> distr;
-
+    unsigned int * arr = new unsigned int [size];
     for(int i = 0; i < size; i++)
-        arr[i] = distr(eng);
+        arr[i] = (unsigned int) rand();
     return arr;
 }
+
+
+
 
 int main( int argc, char** argv )
 {
 
     int rows = 256;
     int cols = 480;
-    unsigned long long * L = genData(rows * cols);
-    unsigned long long * R = genData(rows * cols);
+    unsigned int * L = genData(rows * cols);
+    unsigned int * R = genData(rows * cols);
     float * shifted_images = new float [rows * cols * D];
     
     auto clock_start = std::chrono::system_clock::now();
@@ -43,8 +55,8 @@ int main( int argc, char** argv )
     float avg_time = ((float) elapsed_time / (float) NUM_ITERS);
     std::cout << "average cpu time: " << avg_time << std::endl;
 
-    unsigned long long int * im1_gpu;
-    unsigned long long int * im2_gpu;
+    unsigned int * im1_gpu;
+    unsigned int * im2_gpu;
     float * shifted_images_gpu;
     
     auto clock_start_gpu = std::chrono::system_clock::now();
@@ -52,10 +64,10 @@ int main( int argc, char** argv )
     {
         std::cout << "gpu iter: " << iter << std::endl;
         gpuErrchk( cudaMalloc((void **) &shifted_images_gpu, sizeof(float) * rows * cols * D) );
-        gpuErrchk( cudaMalloc((void **) &im1_gpu, sizeof(unsigned long long int) * rows * cols) );
-        gpuErrchk( cudaMalloc((void **) &im2_gpu, sizeof(unsigned long long int) * rows * cols) );
-        gpuErrchk( cudaMemcpy(im1_gpu, L, sizeof(unsigned long long int) * rows * cols, cudaMemcpyHostToDevice) );
-        gpuErrchk( cudaMemcpy(im2_gpu, R, sizeof(unsigned long long int) * rows * cols, cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMalloc((void **) &im1_gpu, sizeof(unsigned int) * rows * cols) );
+        gpuErrchk( cudaMalloc((void **) &im2_gpu, sizeof(unsigned int) * rows * cols) );
+        gpuErrchk( cudaMemcpy(im1_gpu, L, sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMemcpy(im2_gpu, R, sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
         
         device_shift_subtract_stack(im1_gpu,
         im2_gpu,

@@ -33,16 +33,25 @@ __device__ float __hamming_dist(unsigned long long a,
         return z;
     }
 
-
-  __device__ float __hamming_dist_fast(unsigned long long a,
-    unsigned long long b){
-        unsigned long long c = a^b;
+  __device__ float __hamming_dist_int(unsigned int a,
+    unsigned int b){
+        unsigned int c = a^b;
         float z = 0;
         while (c != 0){
             z += c & 1;
             c>>=1;
         }
         return z;
+    }
+
+  __device__ float __hamming_dist_int_fast(unsigned int a,
+    unsigned int b){
+      a = a^b;
+      a = a - ((a >> 1) & 0x55555555);
+      a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+      a = (a + (a >> 4)) & 0xF0F0F0F;
+      a = (a * 0x01010101) >> 24;
+      return a;
     }
 
 
