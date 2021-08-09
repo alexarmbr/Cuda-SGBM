@@ -60,7 +60,7 @@ __device__ float __hamming_dist(unsigned long long a,
 
 
 
-float * device_shift_subtract_stack(unsigned long long int * L, unsigned long long int * R,
+float * device_shift_subtract_stack(unsigned int * L, unsigned int * R,
   float * out,
   int rows, int cols)
   {
@@ -69,13 +69,13 @@ float * device_shift_subtract_stack(unsigned long long int * L, unsigned long lo
     int gridY = (rows + blockSize - 1) / blockSize;
     dim3 grid(gridX, gridY);
     dim3 block(blockSize, blockSize, 1);
-    __shift_subtract_stack<<<grid, block>>>(L,R,out,rows,cols);
+    __shift_subtract_stack_2<<<grid, block>>>(L,R,out,rows,cols);
     return out;
   }
 
 
-__global__ void __shift_subtract_stack(unsigned long long int * L,
-  unsigned long long int * R,
+__global__ void __shift_subtract_stack(unsigned int * L,
+  unsigned int * R,
   float * out,
   int rows, int cols)
 {
@@ -87,7 +87,7 @@ __global__ void __shift_subtract_stack(unsigned long long int * L,
   for(int d = 0; d < D; d++)
   {
     if (j + d < cols)
-      out[ind] = __hamming_dist(R[(ind % imsize) + d], L[ind % imsize]);
+      out[ind] = __hamming_dist_int(R[(ind % imsize) + d], L[ind % imsize]);
     else
       out[ind] = 1e7;
     ind += imsize;
@@ -96,8 +96,8 @@ __global__ void __shift_subtract_stack(unsigned long long int * L,
 
 
 
-__global__ void __shift_subtract_stack_2(unsigned long long int * L,
-  unsigned long long int * R,
+__global__ void __shift_subtract_stack_2(unsigned int * L,
+  unsigned int * R,
   float * out,
   int rows, int cols)
 {
@@ -109,7 +109,7 @@ __global__ void __shift_subtract_stack_2(unsigned long long int * L,
   for(int d = 0; d < D; d++)
   {
     if (j + d < cols)
-      out[ind] = __hamming_dist(R[(ind % imsize) + d], L[ind % imsize]);
+      out[ind] = __hamming_dist_int_fast(R[(ind % imsize) + d], L[ind % imsize]);
     else
       out[ind] = 1e7;
     ind += imsize;

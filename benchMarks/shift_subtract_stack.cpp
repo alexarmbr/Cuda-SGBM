@@ -6,7 +6,7 @@
 #include <random>
 #include <limits>
 
-const int NUM_ITERS = 1;
+const int NUM_ITERS = 10;
 
 // unsigned long long * genData(int size)
 // {
@@ -22,7 +22,7 @@ const int NUM_ITERS = 1;
 // }
 
 
-unsigned long long * genData(int size)
+unsigned int * genData(int size)
 {
     unsigned int * arr = new unsigned int [size];
     for(int i = 0; i < size; i++)

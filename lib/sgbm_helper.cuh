@@ -15,10 +15,16 @@
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three);
 
-__global__ void __shift_subtract_stack(unsigned long long int * L,
-    unsigned long long int * R,
+__global__ void __shift_subtract_stack(unsigned int * L,
+    unsigned int * R,
     float * out,
     int rows, int cols);
+
+__global__ void __shift_subtract_stack_2(unsigned int * L,
+    unsigned int * R,
+    float * out,
+    int rows, int cols);
+
 
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n);
 
@@ -42,7 +48,7 @@ __global__ void __argmin_3d_mat(float * dp, int * stereo_im, int m, int n);
 
 
 // wrapper funcs
-float * device_shift_subtract_stack(unsigned long long int * L, unsigned long long int * R,
+float * device_shift_subtract_stack(unsigned int * L, unsigned int * R,
     float * out,
     int rows, int cols);
 float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream);

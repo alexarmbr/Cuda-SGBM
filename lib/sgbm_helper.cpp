@@ -30,7 +30,7 @@ cudaStream_t stream)
     // if shifted_images, cim1, cim2 were numpy arrays with dimensions disparity (D), row, col
     // shifted_images[D,i,j] = cim1[i,j+D] - cim2[i,j]
     // with padding where necessary
-    shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols);
+    // shift_subtract_stack(cim1, cim2, shifted_images, nRows, nCols);
     
     // cudaMalloc modifies this pointer to point to block of memory on device
     float* gpu_ptr_shifted_im;
@@ -125,8 +125,8 @@ unsigned long long b){
 
 
 
-extern "C" void shift_subtract_stack(unsigned long long int * L,
-unsigned long long int * R,
+extern "C" void shift_subtract_stack(unsigned int * L,
+unsigned int * R,
 float * out,
 int rows, int cols){
     // std::cout << "shift subtract stack" << std::endl;
