@@ -215,7 +215,7 @@ __global__ void __shift_subtract_stack_4_PT_5(unsigned int * L,
       #pragma unroll
       for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
       {
-        out[out_ind + iter * inc] = 10e7;
+        out[out_ind + iter * inc] = 1e7;
       }
     }
       
