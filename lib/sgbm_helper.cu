@@ -139,6 +139,45 @@ __global__ void __shift_subtract_stack_3(unsigned int * L,
 
 
 
+__global__ void __shift_subtract_stack_4(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int lval = L[ind];
+  int inc = blockIdx.y * blockDim.y * cols
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+    {
+      out[out_ind] = __hamming_dist_int_fast(R[ind + d], lval);
+      out[out_ind + inc] = __hamming_dist_int_fast(R[ind + inc], lval);
+    }
+    else
+    {
+      out[out_ind] = 1e7;
+      out[out_ind + inc] = 1e7;
+    }
+      
+    out_ind += imsize;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
 // right aggregation
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n)
 {
