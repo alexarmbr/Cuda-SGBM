@@ -69,6 +69,20 @@ float * device_shift_subtract_stack(unsigned int * L, unsigned int * R,
   }
 
 
+  float * device_shift_subtract_stack_4(unsigned int * L, unsigned int * R,
+    float * out,
+    int rows, int cols)
+    {
+      int blockSize = 32;
+      int gridX = (cols + blockSize - 1) / blockSize;
+      int gridY = ((rows / PIXEL_PER_THREAD) + blockSize - 1) / blockSize;
+      dim3 grid(gridX, gridY);
+      dim3 block(blockSize, blockSize, 1);
+      __shift_subtract_stack_4_PT_5<<<grid, block>>>(L,R,out,rows,cols);
+      return out;
+    }
+
+
 __global__ void __shift_subtract_stack(unsigned int * L,
   unsigned int * R,
   float * out,
@@ -138,7 +152,6 @@ __global__ void __shift_subtract_stack_3(unsigned int * L,
 
 
 
-
 __global__ void __shift_subtract_stack_4(unsigned int * L,
   unsigned int * R,
   float * out,
@@ -149,14 +162,15 @@ __global__ void __shift_subtract_stack_4(unsigned int * L,
   int i = threadIdx.y + blockIdx.y * blockDim.y;
   int ind = i * cols + j;
   int out_ind = ind;
+  int inc = gridDim.y * blockDim.y * cols;
   int lval = L[ind];
-  int inc = blockIdx.y * blockDim.y * cols
+  int lval2 = L[ind + inc];
   for(int d = 0; d < D; d++)
   {
     if (j + d < cols)
     {
       out[out_ind] = __hamming_dist_int_fast(R[ind + d], lval);
-      out[out_ind + inc] = __hamming_dist_int_fast(R[ind + inc], lval);
+      out[out_ind + inc] = __hamming_dist_int_fast(R[ind + inc + d], lval2);
     }
     else
     {
@@ -170,6 +184,97 @@ __global__ void __shift_subtract_stack_4(unsigned int * L,
 
 
 
+__global__ void __shift_subtract_stack_4_PT_5(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int inc = gridDim.y * blockDim.y * cols;
+  int lvals[PIXEL_PER_THREAD];
+  
+  for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+    lvals[iter] = L[ind + iter * inc];
+  
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+    {
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+      {
+        out[out_ind + iter * inc] = __hamming_dist_int_fast(R[ind + d + iter * inc], lvals[iter]);
+      }
+    }
+    else
+    {
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+      {
+        out[out_ind + iter * inc] = 10e7;
+      }
+    }
+      
+    out_ind += imsize;
+  }
+}
+
+
+
+
+
+
+
+__global__ void __shift_subtract_stack_5(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int inc = gridDim.y * blockDim.y * cols;
+  int b = L[ind];
+  int e = L[ind + inc];
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+    {
+      int a = R[ind + d];
+      int c = R[ind + inc + d];
+      a = a^b;
+      c = c^e;
+      
+      a = a - ((a >> 1) & 0x55555555);
+      c = c - ((c >> 1) & 0x55555555);
+      
+      a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+      c = (c & 0x33333333) + ((c >> 2) & 0x33333333);
+      
+      a = (a + (a >> 4)) & 0xF0F0F0F;
+      c = (c + (c >> 4)) & 0xF0F0F0F;
+      
+      a = (a * 0x01010101) >> 24;
+      c = (c * 0x01010101) >> 24;
+    
+      out[out_ind] = a;
+      out[out_ind + inc] = c;
+    }
+    else
+    {
+      out[out_ind] = 1e7;
+      out[out_ind + inc] = 1e7;
+    }
+      
+    out_ind += imsize;
+  }
+}
 
 
 

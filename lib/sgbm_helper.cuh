@@ -11,6 +11,7 @@
 #define P1 5
 #define P2 90000
 #define SHMEM_SIZE 32
+#define PIXEL_PER_THREAD 1
 
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three);
@@ -31,6 +32,20 @@ __global__ void __shift_subtract_stack_3(unsigned int * L,
     float * out,
     int rows, int cols);
 
+
+__global__ void __shift_subtract_stack_4(unsigned int * L,
+    unsigned int * R,
+    float * out,
+    int rows, int cols);
+__global__ void __shift_subtract_stack_5(unsigned int * L,
+    unsigned int * R,
+    float * out,
+    int rows, int cols);
+
+__global__ void __shift_subtract_stack_4_PT_5(unsigned int * L,
+    unsigned int * R,
+    float * out,
+    int rows, int cols);
 
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n);
 
@@ -55,6 +70,9 @@ __global__ void __argmin_3d_mat(float * dp, int * stereo_im, int m, int n);
 
 // wrapper funcs
 float * device_shift_subtract_stack(unsigned int * L, unsigned int * R,
+    float * out,
+    int rows, int cols);
+float * device_shift_subtract_stack_4(unsigned int * L, unsigned int * R,
     float * out,
     int rows, int cols);
 float * r_aggregate(int nCols, int nRows, float * shifted_images, float * dp, cudaStream_t stream);
