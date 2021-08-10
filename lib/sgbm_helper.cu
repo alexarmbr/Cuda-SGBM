@@ -91,62 +91,6 @@ __global__ void __shift_subtract_stack(unsigned int * L,
 
 
 
-__global__ void __shift_subtract_stack_3(unsigned int * L,
-  unsigned int * R,
-  float * out,
-  int rows, int cols)
-{
-  int imsize = rows * cols;
-  int j = threadIdx.x + blockIdx.x * blockDim.x;
-  int i = threadIdx.y + blockIdx.y * blockDim.y;
-  int ind = i * cols + j;
-  
-  #pragma unroll
-  for(int d = 0; d < D; d+=2)
-  {
-    
-      
-    unsigned int a1;
-    unsigned int b1;
-    unsigned int a2;
-    unsigned int b2;
-    
-    if (j + d + 1 < cols)
-      {
-      a1 = R[(ind % imsize) + d];
-      b1 = L[ind % imsize];
-      a2 = R[(ind % imsize) + d + 1];
-      b2 = L[ind % imsize + 1];
-      
-
-      a1 = a1^b1;
-      a2 = a2^b2;
-      
-      a1 = a1 - ((a1 >> 1) & 0x55555555);
-      a2 = a2 - ((a2 >> 1) & 0x55555555);
-      
-      a1 = (a1 & 0x33333333) + ((a1 >> 2) & 0x33333333);
-      a2 = (a2 & 0x33333333) + ((a2 >> 2) & 0x33333333);
-      
-      a1 = (a1 + (a1 >> 4)) & 0xF0F0F0F;
-      a2 = (a2 + (a2 >> 4)) & 0xF0F0F0F;
-      
-      a1 = (a1 * 0x01010101) >> 24;
-      a2 = (a2 * 0x01010101) >> 24;
-      out[ind] = a1;
-      out[ind] = a2;
-    }
-    else
-    {
-      out[ind] = 10e7;
-      out[ind + imsize] = 10e7;
-    }
-    ind += 2 * imsize;
-  }
-}
-
-
-
 __global__ void __shift_subtract_stack_2(unsigned int * L,
   unsigned int * R,
   float * out,
@@ -165,6 +109,30 @@ __global__ void __shift_subtract_stack_2(unsigned int * L,
     else
       out[ind] = 1e7;
     ind += imsize;
+  }
+}
+
+
+
+__global__ void __shift_subtract_stack_3(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int lval = L[ind];
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+
+      out[out_ind] = __hamming_dist_int_fast(R[ind + d], lval);
+    else
+      out[out_ind] = 1e7;
+    out_ind += imsize;
   }
 }
 
