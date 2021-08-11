@@ -11,7 +11,7 @@
 #define P1 5
 #define P2 90000
 #define SHMEM_SIZE 32
-#define PIXEL_PER_THREAD 1
+#define PIXEL_PER_THREAD 2
 
 
 __device__ float dp_criteria(float *dp, int ind, int depth_dim_size, int d, float P_one, float P_two, float * d_zero, float * d_one, float * d_two, float * d_three);

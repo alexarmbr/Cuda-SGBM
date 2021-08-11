@@ -52,16 +52,16 @@ int main( int argc, char** argv )
     
 
     // cpu benchmark
-    auto clock_start = std::chrono::system_clock::now();
-    for(int iter = 0; iter < 1; iter++)
-    {
-        std::cout << "cpu iter: " << iter << std::endl;
-        shift_subtract_stack(L[0], R[0], shifted_images[0], rows, cols);
-    }
-    auto clock_end = std::chrono::system_clock::now();
-    unsigned int elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end-clock_start).count();
-    float avg_time = ((float) elapsed_time / (float) NUM_ITERS);
-    std::cout << "average cpu time: " << avg_time << std::endl;
+    // auto clock_start = std::chrono::system_clock::now();
+    // for(int iter = 0; iter < 1; iter++)
+    // {
+    //     std::cout << "cpu iter: " << iter << std::endl;
+    //     shift_subtract_stack(L[0], R[0], shifted_images[0], rows, cols);
+    // }
+    // auto clock_end = std::chrono::system_clock::now();
+    // unsigned int elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end-clock_start).count();
+    // float avg_time = ((float) elapsed_time / (float) NUM_ITERS);
+    // std::cout << "average cpu time: " << avg_time << std::endl;
 
     unsigned int * im1_gpu;
     unsigned int * im2_gpu;
@@ -90,12 +90,12 @@ int main( int argc, char** argv )
     std::cout << "average gpu time: " << avg_time_gpu << std::endl;
 
 
-    float * shifted_images_cpu = new float[rows * cols * D];
-    gpuErrchk( cudaMemcpy(shifted_images_cpu, shifted_images_gpu, sizeof(float) * rows * cols * D, cudaMemcpyDeviceToHost) );
+    // float * shifted_images_cpu = new float[rows * cols * D];
+    // gpuErrchk( cudaMemcpy(shifted_images_cpu, shifted_images_gpu, sizeof(float) * rows * cols * D, cudaMemcpyDeviceToHost) );
 
 
-    for(int i = 0; i < rows * cols * D; i++)
-    {
-        assert(shifted_images_cpu[i] == shifted_images[0][i]);
-    }   
+    // for(int i = 0; i < rows * cols * D; i++)
+    // {
+    //     assert(shifted_images_cpu[i] == shifted_images[0][i]);
+    // }   
 }

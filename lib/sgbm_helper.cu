@@ -44,6 +44,12 @@ __device__ float __hamming_dist(unsigned long long a,
         return z;
     }
 
+  #define XOR__(a,b) a = a^b;
+  #define SHIFT1__(a) a = a - ((a >> 1) & 0x55555555);
+  #define SHIFT2__(a) a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+  #define SHIFT3__(a) a = (a + (a >> 4)) & 0xF0F0F0F;
+  #define SHIFT4__(a) a = (a * 0x01010101) >> 24;
+
   __device__ float __hamming_dist_int_fast(unsigned int a,
     unsigned int b){
       a = a^b;
@@ -278,6 +284,64 @@ __global__ void __shift_subtract_stack_5(unsigned int * L,
 
 
 
+__global__ void __shift_subtract_stack_5_PT_5(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int inc = gridDim.y * blockDim.y * cols;
+  int lvals[PIXEL_PER_THREAD];
+  
+  #pragma unroll
+  for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+    lvals[iter] = L[ind + iter * inc];
+  
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+    {
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+        XOR__(lval[iter], R[ind + d + iter * inc]);
+      
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+        SHIFT1__(lval[iter]);
+      
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+        SHIFT2__(lval[iter]);
+      
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+        SHIFT3__(lval[iter])
+      
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+        SHIFT4__(lval[iter]);
+      
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+        out[out_ind + iter * inc] = lval[iter];
+
+    }
+    else
+    {
+      #pragma unroll
+      for(int iter = 0; iter < PIXEL_PER_THREAD; iter++)
+      {
+        out[out_ind + iter * inc] = 1e7;
+      }
+    }
+      
+    out_ind += imsize;
+  }
+}
 
 
 
