@@ -54,4 +54,4 @@ imload_benchmark: imload_benchmark.cpp
 	g++ -o imload_benchmark imload_benchmark.cpp $(INCLUDE) $(LIBS)
 
 clean:
-	rm -f *.o lib/*.so sgbm sgbm_video_naive imload_benchmark
+	rm -f *.o lib/*.so sgbm sgbm_video_naive imload_benchmark benchMarks/shift_subtract_stack
