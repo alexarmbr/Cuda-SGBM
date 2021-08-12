@@ -84,7 +84,7 @@ float * device_shift_subtract_stack_base(unsigned int * L, unsigned int * R,
       int gridY = (rows + blockSize - 1) / blockSize;
       dim3 grid(gridX, gridY);
       dim3 block(blockSize, blockSize, 1);
-      __shift_subtract_stack_level1<<<grid, block>>>(L,R,out,rows,cols);
+      __shift_subtract_stack_level1pt5<<<grid, block>>>(L,R,out,rows,cols);
       return out;
     }
 
@@ -170,6 +170,43 @@ __global__ void __shift_subtract_stack_level1pt5(unsigned int * L,
   }
 }
 
+
+
+__global__ void __shift_subtract_stack_level1pt7(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int lval = L[ind];
+  __shared__ unsigned int shmem[32][32];
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
+      shmem[threadIdx.y][threadIdx.x] = R[ind + d];
+    __syncthreads();
+    if (i + d < cols)
+      shmem[threadIdx.x][threadIdx.y] = __hamming_dist_int_fast(lval, shmem[threadIdx.x][threadIdx.y]);
+    __syncthreads();
+    if(j + d < cols)
+      out[out_ind] = shmem[threadIdx.y][threadIdx.x];
+    else
+      out[ind] = 10e7;
+    out_ind += imsize;
+  }
+}
+
+
+
+
+
+
+
+
 __global__ void __shift_subtract_stack_level2(unsigned int * L,
   unsigned int * R,
   float * out,
@@ -192,6 +229,8 @@ __global__ void __shift_subtract_stack_level2(unsigned int * L,
   
   for(int d = 0; d < D; d++)
   {
+
+    
     if (j + d < cols)
     {
       unsigned int a1 = R[ind + d];
