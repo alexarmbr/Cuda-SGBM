@@ -42,6 +42,12 @@ __global__ void __shift_subtract_stack_level1pt7(unsigned int * L,
     float * out,
     int rows, int cols);
 
+__global__ void __shift_subtract_stack_baseline(unsigned int * L,
+    unsigned int * R,
+    float * out,
+    int rows, int cols);
+
+
 __global__ void __r_aggregate(float *dp, float *cost_image, int m, int n);
 
 __global__ void __l_aggregate(float *dp, float *cost_image, int m, int n);
@@ -65,6 +71,9 @@ __global__ void __argmin_3d_mat(float * dp, int * stereo_im, int m, int n);
 
 // wrapper funcs
 float * device_shift_subtract_stack_base(unsigned int * L, unsigned int * R,
+    float * out,
+    int rows, int cols);
+float * device_shift_subtract_stack_baseline(unsigned int * L, unsigned int * R,
     float * out,
     int rows, int cols);
 float * device_shift_subtract_stack_level1(unsigned int * L, unsigned int * R,

@@ -43,8 +43,8 @@ inline float hamming_dist(unsigned long long a,
 unsigned long long b);
 
 
-extern "C" void shift_subtract_stack(unsigned int * L,
-unsigned int * R,
+extern "C" void shift_subtract_stack(unsigned long long * L,
+unsigned long long * R,
 float * out,
 int rows, int cols);
 

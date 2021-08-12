@@ -34,8 +34,8 @@ unsigned int * genData(int size)
 int main( int argc, char** argv )
 {
 
-    int rows = 512;
-    int cols = 512;
+    int rows = 2048;
+    int cols = 2048;
     unsigned int * L[NUM_STREAMS];
     unsigned int * R[NUM_STREAMS];
     float * shifted_images[NUM_STREAMS];
@@ -69,52 +69,69 @@ int main( int argc, char** argv )
     gpuErrchk( cudaMalloc((void **) &im2_gpu, sizeof(unsigned int) * rows * cols) );
     gpuErrchk( cudaMemcpy(im1_gpu, L[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
     gpuErrchk( cudaMemcpy(im2_gpu, R[0], sizeof(unsigned int) * rows * cols, cudaMemcpyHostToDevice) );
+    // auto clock_start_gpu = std::chrono::system_clock::now();
+    // for(int iter = 0; iter < NUM_ITERS; iter++)
+    // {
+    //     //std::cout << "gpu iter: " << iter << std::endl;
+    //     device_shift_subtract_stack_base(im1_gpu,
+    //     im2_gpu,
+    //     shifted_images_gpu,
+    //     rows, cols);
+    //     gpuErrchk( cudaDeviceSynchronize() );
+    // }
+    // auto clock_end_gpu = std::chrono::system_clock::now();
+    // unsigned int elapsed_time_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end_gpu-clock_start_gpu).count();
+    // float avg_time_gpu = ((float) elapsed_time_gpu / (float) NUM_ITERS);
+    // std::cout << "base gpu time: " << avg_time_gpu << std::endl;
+
+    // clock_start_gpu = std::chrono::system_clock::now();
+    // for(int iter = 0; iter < NUM_ITERS; iter++)
+    // {
+    //     //std::cout << "gpu iter: " << iter << std::endl;
+    //     device_shift_subtract_stack_level1(im1_gpu,
+    //     im2_gpu,
+    //     shifted_images_gpu,
+    //     rows, cols);
+    //     //gpuErrchk( cudaPeekAtLastError() );
+    //     gpuErrchk( cudaDeviceSynchronize() );
+    // }
+    // clock_end_gpu = std::chrono::system_clock::now();
+    // elapsed_time_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end_gpu-clock_start_gpu).count();
+    // avg_time_gpu = ((float) elapsed_time_gpu / (float) NUM_ITERS);
+    // std::cout << "level 1 gpu time: " << avg_time_gpu << std::endl;
+
+    // clock_start_gpu = std::chrono::system_clock::now();
+    // for(int iter = 0; iter < NUM_ITERS; iter++)
+    // {
+    //     //std::cout << "gpu iter: " << iter << std::endl;
+    //     device_shift_subtract_stack_level2(im1_gpu,
+    //     im2_gpu,
+    //     shifted_images_gpu,
+    //     rows, cols);
+    //     //gpuErrchk( cudaPeekAtLastError() );
+    //     gpuErrchk( cudaDeviceSynchronize() );
+    // }
+    // clock_end_gpu = std::chrono::system_clock::now();
+    // elapsed_time_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end_gpu-clock_start_gpu).count();
+    // avg_time_gpu = ((float) elapsed_time_gpu / (float) NUM_ITERS);
+    // std::cout << "level 2 gpu time: " << avg_time_gpu << std::endl;
+
+
     auto clock_start_gpu = std::chrono::system_clock::now();
     for(int iter = 0; iter < NUM_ITERS; iter++)
     {
         //std::cout << "gpu iter: " << iter << std::endl;
-        device_shift_subtract_stack_base(im1_gpu,
+        device_shift_subtract_stack_baseline(im1_gpu,
         im2_gpu,
         shifted_images_gpu,
         rows, cols);
+        //gpuErrchk( cudaPeekAtLastError() );
         gpuErrchk( cudaDeviceSynchronize() );
     }
     auto clock_end_gpu = std::chrono::system_clock::now();
     unsigned int elapsed_time_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end_gpu-clock_start_gpu).count();
     float avg_time_gpu = ((float) elapsed_time_gpu / (float) NUM_ITERS);
-    std::cout << "base gpu time: " << avg_time_gpu << std::endl;
-
-    clock_start_gpu = std::chrono::system_clock::now();
-    for(int iter = 0; iter < NUM_ITERS; iter++)
-    {
-        //std::cout << "gpu iter: " << iter << std::endl;
-        device_shift_subtract_stack_level1(im1_gpu,
-        im2_gpu,
-        shifted_images_gpu,
-        rows, cols);
-        //gpuErrchk( cudaPeekAtLastError() );
-        gpuErrchk( cudaDeviceSynchronize() );
-    }
-    clock_end_gpu = std::chrono::system_clock::now();
-    elapsed_time_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end_gpu-clock_start_gpu).count();
-    avg_time_gpu = ((float) elapsed_time_gpu / (float) NUM_ITERS);
-    std::cout << "level 1 gpu time: " << avg_time_gpu << std::endl;
-
-    clock_start_gpu = std::chrono::system_clock::now();
-    for(int iter = 0; iter < NUM_ITERS; iter++)
-    {
-        //std::cout << "gpu iter: " << iter << std::endl;
-        device_shift_subtract_stack_level2(im1_gpu,
-        im2_gpu,
-        shifted_images_gpu,
-        rows, cols);
-        //gpuErrchk( cudaPeekAtLastError() );
-        gpuErrchk( cudaDeviceSynchronize() );
-    }
-    clock_end_gpu = std::chrono::system_clock::now();
-    elapsed_time_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(clock_end_gpu-clock_start_gpu).count();
-    avg_time_gpu = ((float) elapsed_time_gpu / (float) NUM_ITERS);
-    std::cout << "level 2 gpu time: " << avg_time_gpu << std::endl;
+    std::cout << "subtraction baseline time: " << avg_time_gpu << std::endl;
 
 
     // float * shifted_images_cpu = new float[rows * cols * D];

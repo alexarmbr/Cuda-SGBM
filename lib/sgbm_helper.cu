@@ -60,6 +60,18 @@ __device__ float __hamming_dist(unsigned long long a,
       return a;
     }
 
+float * device_shift_subtract_stack_baseline(unsigned int * L, unsigned int * R,
+  float * out,
+  int rows, int cols)
+  {
+    int blockSize = 32;
+    int gridX = (cols + blockSize - 1) / blockSize;
+    int gridY = (rows + blockSize - 1) / blockSize;
+    dim3 grid(gridX, gridY);
+    dim3 block(blockSize, blockSize, 1);
+    __shift_subtract_stack_baseline<<<grid, block>>>(L,R,out,rows,cols);
+    return out;
+  }
 
 float * device_shift_subtract_stack_base(unsigned int * L, unsigned int * R,
   float * out,
@@ -201,8 +213,27 @@ __global__ void __shift_subtract_stack_level1pt7(unsigned int * L,
 }
 
 
+__global__ void __shift_subtract_stack_baseline(unsigned int * L,
+  unsigned int * R,
+  float * out,
+  int rows, int cols)
+{
+  int imsize = rows * cols;
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  int ind = i * cols + j;
+  int out_ind = ind;
+  int lval = L[ind];
+  for(int d = 0; d < D; d++)
+  {
+    if (j + d < cols)
 
-
+      out[out_ind] = R[ind + d] - lval;
+    else
+      out[out_ind] = 1e7;
+    out_ind += imsize;
+  }
+}
 
 
 
